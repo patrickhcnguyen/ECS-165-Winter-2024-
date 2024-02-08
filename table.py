@@ -25,7 +25,7 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns
-        self.page_directory = {}
+        self.page_directory = {} # what I'm thinking right now is that it will be a dict of col_num:[pages], we might need to seperate base and tail pages
         self.index = Index(self)
         pass
 
@@ -34,4 +34,4 @@ class Table:
         pass
  
     def insert_record(self, record_arr):
-
+        pass
