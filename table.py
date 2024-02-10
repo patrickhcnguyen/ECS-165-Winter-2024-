@@ -1,6 +1,7 @@
 from lstore.index import Index
 from time import time
 
+#first 4 columns of all records are listed below:
 INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
@@ -25,13 +26,16 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns
-        self.page_directory = {} # what I'm thinking right now is that it will be a dict of col_num:[pages], we might need to seperate base and tail pages
+        self.page_directory = {}
+        self.init_page_dir()
         self.index = Index(self)
+        pass
+
+    def init_page_dir(self, num_columns):
+        for i in range(num_columns+3):
+            self.page_directory.append(key: i, page: Page())
         pass
 
     def __merge(self):
         print("merge is happening")
-        pass
- 
-    def insert_record(self, record_arr):
         pass
