@@ -1,4 +1,4 @@
-#from index import Index
+from index import Index
 from page import Page
 from time import time
 
@@ -30,7 +30,7 @@ class Table:
         self.page_directory = {}
         self.num_pages = -1 #stores the amount of pages minus 1
         self.init_page_dir(self.num_columns)
-        #self.index = Index(self)
+        self.index = Index(self)
         pass
 
     def init_page_dir(self, num_columns): #adds one page-range of pages to the page_directory, if the base pages have filled up or to initialize the page directory
