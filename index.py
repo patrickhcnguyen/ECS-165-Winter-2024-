@@ -39,6 +39,13 @@ class Index:
         b_tree.update(key, old_rid, new_rid)
 
     """
+    # Lazy deletes index of key and RID
+    """
+    def lazy_delete_index(self, column, key, rid):
+        b_tree = self.indices[column]
+        b_tree.lazy_delete(key, rid)
+        
+    """
     # optional: Create index on specific column
     """
     def create_index(self, column_number):
@@ -51,11 +58,14 @@ class Index:
         self.indices[column_number] = None
 
 """
-# B-Tree data structure that supports duplicate RID's for one key
+# B-Tree data structure that supports duplicate RID's for one key.
 # main functions:
 # search(key) - returns RID(s) 
 # search_range(key) - returns all RID(s) in the range
 # update(key, old_rid, new_rid) - updates old_rid of key to new_rid
+# lazy_delete(key, rid) - sets rid of key to -1 if the value is deleted <-- ignore -1 rids for query operations
+#   - don't have to use this function! it's just an idea for deletion
+# Feel free to change anything for the BTree/BNode to work with query/or if there is any errors
 """
 class BNode:
     def __init__(self, t, is_leaf):
@@ -182,3 +192,6 @@ class BTree:
                 self.root = s
             else:
                 self.root.insert_not_full(key, rid)
+
+    def lazy_delete(self, key, rid):
+        self.update(key, rid, -1) # sets old rid of key to -1 (lazy deletion)

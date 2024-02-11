@@ -67,5 +67,8 @@ print("all RID's of values from 5 to 25 is:", t1.index.locate_range(0, 5, 25))
 
 print("update the rid of value 50 from 5 to 6")
 t1.index.update_index(0, 50, 5, 6)
-
 print("the RID of value 50 is now updated to :", t1.index.locate(0, 50))
+
+print("lazy delete value 50 (change the rid to -1)")
+t1.index.lazy_delete_index(0, 50, 6)
+print("the RID of value 50 is:", t1.index.locate(0, 50))
