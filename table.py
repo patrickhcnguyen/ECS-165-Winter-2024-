@@ -31,6 +31,7 @@ class Table:
         self.num_pages = -1 #stores the amount of pages minus 1
         self.init_page_dir(self.num_columns)
         self.index = Index(self)
+        self.rid = 0
         pass
 
     def init_page_dir(self, num_columns): #adds one page-range of pages to the page_directory, if the base pages have filled up or to initialize the page directory
@@ -45,3 +46,20 @@ class Table:
 
     def update_record(self, key, record): #for updating the indirection column of the base record, write_update returns the rid of the new tail record 
         pass
+
+    def insert_record(self, *columns): #it doesn't work, just pushing for rid
+        schema_encoding = '0' * self.table.num_columns
+        total_cols = len(columns)
+
+        if not self.page_directory:
+            self.table.init_page_dir(total_cols) # create page range
+        else:
+            self.page_directory.popitem
+
+        for i in range(total_cols):
+            rid = self.table.page_directory[i].write(columns[i])
+
+        self.table.index.add_index(RID_COLUMN, columns[self.key], self.rid) # add index
+        self.rid += 1
+
+

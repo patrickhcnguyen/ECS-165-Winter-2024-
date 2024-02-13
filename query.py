@@ -1,6 +1,7 @@
-from lstore.table import Table, Record
-from lstore.index import Index
+from table import Table, Record
+from index import Index
 
+RID_COLUMN = 1
 
 class Query:
     """
@@ -30,9 +31,13 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
-        schema_encoding = '0' * self.table.num_columns
-        pass
-
+        self.table.insert_record(*columns)
+        # total_cols = len(columns)
+        # self.table.init_page_dir(total_cols)
+        # for i in range(total_cols):
+        #     rid = self.table.page_directory[i].write(columns[i])
+        #     self.table.index.add_index(RID_COLUMN, , rid)
+        
     
     """
     # Read matching record with specified search key
