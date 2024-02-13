@@ -4,8 +4,8 @@ class Page: #This class manages a single base page and ALL tail pages that corre
 
     def __init__(self):
         self.num_records = 0
-        self.max_records = 5 #page size is 512records*8= 4096 bytes for now, but we can experiement which will maximize read and merge performance
-        self.data = bytearray(self.max_records*8) #holds a page-size worth of memory to dedicate for base data; our base page
+        self.max_records = 64 #page size is 64records*64bits_per_record= 4096 bytes for now, but we can experiement which will maximize read and merge performance
+        self.data = bytearray(self.max_records*64) #holds a page-size worth of memory to dedicate for base data; our base page
         self.tailPage_directory = {}
         self.num_tails = -1 #stores the amount of tail pages minus 1
         self.create_new_tail()
@@ -19,14 +19,14 @@ class Page: #This class manages a single base page and ALL tail pages that corre
         if (self.has_capacity()>0):
             rid = self.num_records
             packed_bytes = struct.pack('i', value)
-            self.data[rid*8:rid*8+len(packed_bytes)] = packed_bytes
+            self.data[rid*64:rid*64+len(packed_bytes)] = packed_bytes
             self.num_records += 1
         return rid
     
 
     def create_new_tail(self): #allocate an additional page-size worth of memory to dedicate to update data/tail data; our implementation of tail page
         self.num_tails += 1
-        tail_dict = {"page": bytearray(self.max_records*8), "num_records": 0}
+        tail_dict = {"page": bytearray(self.max_records*64), "num_records": 0}
         self.tailPage_directory[self.num_tails] = tail_dict
         print("created new tail")
 
@@ -39,7 +39,7 @@ class Page: #This class manages a single base page and ALL tail pages that corre
             self.create_new_tail()
         rid = self.tailPage_directory[self.num_tails]["num_records"]
         packed_bytes = struct.pack('i', value)
-        self.tailPage_directory[self.num_tails]["page"][rid*8:rid*8+len(packed_bytes)] = packed_bytes
+        self.tailPage_directory[self.num_tails]["page"][rid*64:rid*64+len(packed_bytes)] = packed_bytes
         self.tailPage_directory[self.num_tails]["num_records"] += 1
         rid = rid + (self.num_tails)*(self.max_records) #The value of the rid that will be returned is the index if all the tail pages were actually one continuous array
         return rid 

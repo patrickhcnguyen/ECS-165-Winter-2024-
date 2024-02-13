@@ -26,7 +26,7 @@ for x in range(4):
     rid = p1.write(5)
     print(rid) #if -1 prints, base page is full and no data was written
 print("\nwriting to tail page of page 2")
-for x in range(5):
+for x in range(64):
     rid = p2.write_update(1)
     print(rid)
 rid = p2.write_update(78)
@@ -36,13 +36,13 @@ for x in range(4):
     rid = p1.write_update(2)
     print(rid)
 print("the data at index/rid 2 of column 1 base page is: ")
-print(struct.unpack('i',p1.data[2*8:2*8+struct.calcsize('i')])[0])
-print("the data at index/rid 5 of column 2 tail page is: ")
-print(struct.unpack('i',p2.tailPage_directory[1]["page"][0*8:0*8+struct.calcsize('i')])[0])
+print(struct.unpack('i',p1.data[2*64:2*64+struct.calcsize('i')])[0])
+print("the data at index/rid 64 of column 2 tail page is: ")
+print(struct.unpack('i',p2.tailPage_directory[1]["page"][0*64:0*64+struct.calcsize('i')])[0])
 print("the data at index/rid 6 of column 2 tail page is: ")
-print(struct.unpack('i',p2.tailPage_directory[1]["page"][1*8:1*8+struct.calcsize('i')])[0])
+print(struct.unpack('i',p2.tailPage_directory[1]["page"][1*64:1*64+struct.calcsize('i')])[0])
 print("the data at index/rid 1 of column 2 tail page is: ")
-print(struct.unpack('i',p1.tailPage_directory[0]["page"][1*8:1*8+struct.calcsize('i')])[0])
+print(struct.unpack('i',p1.tailPage_directory[0]["page"][1*64:1*64+struct.calcsize('i')])[0])
 
 # tests for index
 print("\nTESTS FOR INDEX")
