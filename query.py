@@ -32,12 +32,6 @@ class Query:
     """
     def insert(self, *columns):
         self.table.insert_record(*columns)
-        # total_cols = len(columns)
-        # self.table.init_page_dir(total_cols)
-        # for i in range(total_cols):
-        #     rid = self.table.page_directory[i].write(columns[i])
-        #     self.table.index.add_index(RID_COLUMN, , rid)
-        
     
     """
     # Read matching record with specified search key

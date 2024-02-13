@@ -39,7 +39,7 @@ class Table:
             self.num_pages += 1
             self.page_directory[self.num_pages] = Page() #each "Page" manages one base page and all tail pages to that one base page
         pass
-        
+    
     def __merge(self):
         print("merge is happening")
         pass
@@ -47,17 +47,19 @@ class Table:
     def update_record(self, key, record): #for updating the indirection column of the base record, write_update returns the rid of the new tail record 
         pass
 
-    def insert_record(self, *columns): #it doesn't work, just pushing for rid
+    def insert_record(self, *columns):
         schema_encoding = '0' * self.table.num_columns
-        total_cols = len(columns)
 
-        if not self.page_directory:
-            self.table.init_page_dir(total_cols) # create page range
-        else:
-            self.page_directory.popitem
-
-        for i in range(total_cols):
-            rid = self.table.page_directory[i].write(columns[i])
+        latest_page = self.page_directory[-self.num_columns]
+        if latest_page.has_capacity() < 0:
+            self.init_page_dir(self.num_columns) #create new page range
+        
+        self.table.page_directory[0].write(self.rid)
+        self.table.page_directory[1].write(self.rid)
+        self.table.page_directory[2].write(0)
+        self.table.page_directory[3].write(schema_encoding)
+        for i in range(self.num_pages - self.num_columns + 4, self.num_pages):
+            self.table.page_directory[i].write(columns[i])
 
         self.table.index.add_index(RID_COLUMN, columns[self.key], self.rid) # add index
         self.rid += 1
