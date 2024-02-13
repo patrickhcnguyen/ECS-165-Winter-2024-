@@ -51,13 +51,13 @@ class Table:
         schema_encoding = '0' * self.table.num_columns
 
         latest_page = self.page_directory[-self.num_columns]
-        if latest_page.has_capacity() < 0:
+        if latest_page.has_capacity() <= 0: #if there's no capacity
             self.init_page_dir(self.num_columns) #create new page range
         
-        self.table.page_directory[0].write(self.rid)
-        self.table.page_directory[1].write(self.rid)
-        self.table.page_directory[2].write(0)
-        self.table.page_directory[3].write(schema_encoding)
+        self.table.page_directory[self.num_pages - self.num_columns].write(self.rid)
+        self.table.page_directory[self.num_pages - self.num_columns + 1].write(self.rid)
+        self.table.page_directory[self.num_pages - self.num_columns + 2].write(0)
+        self.table.page_directory[self.num_pages - self.num_columns + 3].write(schema_encoding)
         for i in range(self.num_pages - self.num_columns + 4, self.num_pages):
             self.table.page_directory[i].write(columns[i])
 
