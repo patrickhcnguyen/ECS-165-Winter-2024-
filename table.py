@@ -35,7 +35,7 @@ class Table:
         pass
 
     def init_page_dir(self, num_columns): #adds one page-range of pages to the page_directory, if the base pages have filled up or to initialize the page directory
-        for i in range(num_columns+4):
+        for i in range(num_columns+3):
             self.num_pages += 1
             self.page_directory[self.num_pages] = Page() #each "Page" manages one base page and all tail pages to that one base page
         pass
