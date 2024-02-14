@@ -17,14 +17,14 @@ class Index:
     def locate(self, column, value):
         # rid_value = self.indices[column].search(value) #finds
         rid_value = self.indices[column].values(value,value) 
-        return rid_value # return the RID of value
+        return list(rid_value) # return the RID of value
     
     """
     # Returns the RIDs of all records with values in column "column" between "begin" and "end"
     """
     def locate_range(self, column, begin, end):
         rid_list = self.indices[column].values(begin, end)
-        return rid_list #returns list of RID's of all values that fall within the range
+        return list(rid_list) #returns list of RID's of all values that fall within the range
 
     """
     # Adds index to a column (should be called when a new row/record is inserted)
