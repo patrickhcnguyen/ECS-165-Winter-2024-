@@ -30,7 +30,7 @@ t.insert_record(*record1)
 
 print("testing update")
 record1 = [450, 130, 170, 380, 190]
-t.update_record(47, *record1)
+q.update(47, *record1)
 print(struct.unpack('i', t.page_directory[5].tailPage_directory[0]["page"][0*64:0*64+struct.calcsize('i')])[0]) #tail record points back to base record
 print(struct.unpack('i',t.page_directory[5].data[1*64:1*64+struct.calcsize('i')])[0]) #base record points to tail record
 print(struct.unpack('i', t.page_directory[3].tailPage_directory[0]["page"][0*64:0*64+struct.calcsize('i')])[0])

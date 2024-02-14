@@ -50,16 +50,17 @@ class Table:
     def update_record(self, key, *record): 
         key_rid = self.index.locate(self.key, key) #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
-        print(key_rid)
         page_set = key_rid[0] // max_records #select the page range that row falls in
         rid_in_page = key_rid[0]%max_records
+
         for i in range(self.num_columns):
             value = record[i]
             if (value == None):
                 value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
             self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
         
-        #make the indirection column of the tail record hold the rid currently held in the base record's indirection column
+        # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
+            # tail record of indirection column points to prev version of data -> will be -1 if the prev version is the base record, due to our implementation of insert_record
         prev_version_rid = struct.unpack('i',self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
         tail_rid = self.page_directory[page_set*(self.num_columns+4)].write_update(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
         
@@ -86,7 +87,7 @@ class Table:
         self.page_directory[pages_start+1].write(self.rid) #rid column
         self.page_directory[pages_start+2].write(0) #time_stamp column
         self.page_directory[pages_start+3].write(0) #schema_encoding column
-        self.index.add_index(self.key, columns[self.key], self.rid) # add index
+        self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
         self.rid += 1
 
     def select(self, search_key, search_key_index, projected_columns_index):
