@@ -49,20 +49,7 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
-        try:
-            primary_key = columns[0]
-            rid = self.index.locate(self.key, primary_key)
-
-            if rid is None:
-                # inserting a new record
-                new_rid = self.table.insert_record(*columns)
-                self.index.add_index(self.key, primary_key, new_rid)
-
-            return True
-
-        except Exception as e:
-            print(f"Insert failed: {e}")
-            return False
+        self.table.insert_record(*columns)
     
     """
     # Read matching record with specified search key
