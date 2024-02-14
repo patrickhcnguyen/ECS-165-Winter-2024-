@@ -1,8 +1,9 @@
+from BTrees._OOBTree import OOBTree
 """
 A data strucutre holding indices for various columns of a table. Key column should be indexd by default, other columns can be indexed through this object. Indices are usually B-Trees, but other data structures can be used as well.
 """
 RID_COLUMN = 1
-BTREE_DEGREE = 5 #the number of values stored in one b-tree node <-- can experiment with different values later
+# BTREE_DEGREE = 5 #the number of values stored in one b-tree node <-- can experiment with different values later
 class Index:
 
     def __init__(self, table):
@@ -14,14 +15,15 @@ class Index:
     # returns the location of all records with the given value on column "column"
     """
     def locate(self, column, value):
-        rid_value = self.indices[column].search(value) #finds 
+        # rid_value = self.indices[column].search(value) #finds
+        rid_value = self.indices[column].values(value,value) 
         return rid_value # return the RID of value
     
     """
     # Returns the RIDs of all records with values in column "column" between "begin" and "end"
     """
     def locate_range(self, column, begin, end):
-        rid_list = self.indices[column].search_range(begin, end)
+        rid_list = self.indices[column].values(begin, end)
         return rid_list #returns list of RID's of all values that fall within the range
 
     """
@@ -36,20 +38,22 @@ class Index:
     """
     def update_index(self, column, key, old_rid, new_rid):
         b_tree = self.indices[column]
-        b_tree.update(key, old_rid, new_rid)
+        b_tree[key] = new_rid
 
     """
     # Lazy deletes index of key and RID
     """
     def lazy_delete_index(self, column, key, rid):
-        b_tree = self.indices[column]
-        b_tree.lazy_delete(key, rid)
+        # b_tree = self.indices[column]
+        # b_tree.lazy_delete(key, rid)
+        pass
         
     """
     # optional: Create index on specific column
     """
     def create_index(self, column_number):
-        self.indices[column_number] = BTree(BTREE_DEGREE)
+        # self.indices[column_number] = BTree(BTREE_DEGREE)
+        self.indices[column_number] = OOBTree([])
 
     """
     # optional: Drop index of specific column
@@ -129,6 +133,8 @@ class BNode:
         i = 0;
         while i < self.n and key > self.keys[i]:
             i += 1
+            if self.keys[i] == None:
+                break
         if i < self.n and self.keys[i] == key:
             return self.rids[i]
         if self.leaf:
