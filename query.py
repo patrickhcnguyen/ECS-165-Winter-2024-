@@ -49,7 +49,10 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
-        self.table.insert_record(*columns)
+        primary_key = columns[self.table.key-4]
+        rid = self.table.index.locate(self.table.key, primary_key)
+        if rid is None:
+            self.table.insert_record(*columns)  # if primary key not found
     
     """
     # Read matching record with specified search key
@@ -109,11 +112,12 @@ class Query:
             # finding RID for current key using table's index
             rid = self.index.locate(self.key, key)
             if rid is not None:
-                # calculating which page and where in page record is at 
-                page_number = rid // self.max_records
-                record_number = rid % self.max_records
+                # calculating which page and where in page record is at
+                max_records =  self.table.page_directory[0].max_records
+                page_number = rid // max_records
+                record_number = rid % max_records
                 page = self.page_directory[page_number]
-                value_bytes = page.data[record_number * 64 + (aggregate_column_index * 8): record_number * 64 + ((aggregate_column_index + 1) * 8)]
+                value_bytes = page.data[record_number * 64 + (aggregate_column_index * 64): record_number * 64 + ((aggregate_column_index + 1) * 64)]
                 value = struct.unpack('i', value_bytes)[0] # bytes to integer 
                 total_sum += value # summing value
         return total_sum

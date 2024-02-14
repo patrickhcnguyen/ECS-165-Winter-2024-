@@ -47,6 +47,7 @@ class Table:
         print("merge is happening")
         pass
 
+
     def update_record(self, key, *record): 
         key_rid = self.index.locate(self.key, key) #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
@@ -73,6 +74,7 @@ class Table:
         self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+len(packed_bytes)] = packed_bytes
         return
 
+
     def insert_record(self, *columns):
         schema_encoding = '0' * self.num_columns
 
@@ -87,6 +89,7 @@ class Table:
         self.page_directory[pages_start+1].write(self.rid) #rid column
         self.page_directory[pages_start+2].write(0) #time_stamp column
         self.page_directory[pages_start+3].write(0) #schema_encoding column
+        print(columns[self.key-4])
         self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
         self.rid += 1
 
