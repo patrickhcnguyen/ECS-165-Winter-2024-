@@ -52,16 +52,11 @@ class Table:
         key_rid = self.index.locate(self.key, key) #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
         page_set = key_rid[0] // max_records #select the page range that row falls in
-        rid_in_page = key_rid[0]%max_records
-
-        for i in range(self.num_columns):
-            value = record[i]
-            if (value == None):
-                value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
-            self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
+        rid_in_page = key_rid[0] % max_records
         
+        # write the first 4 columns of the tail record: indirection column, rid, schema_encoding, and time_stamp
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
-            # tail record of indirection column points to prev version of data -> will be -1 if the prev version is the base record, due to our implementation of insert_record
+            # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = struct.unpack('i',self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
         tail_rid = self.page_directory[page_set*(self.num_columns+4)].write_update(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
         
@@ -69,6 +64,22 @@ class Table:
         self.page_directory[2+page_set*(self.num_columns+4)].write_update(0)
         self.page_directory[3+page_set*(self.num_columns+4)].write_update(0)
         
+        # write the actual data columns of the tail record
+        if (prev_version_rid == -1): # reference the base record during the update
+            for i in range(self.num_columns):
+                value = record[i]
+                if (value == None):
+                    value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
+                self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
+        else: # reference the prev_tail_record during the update
+            prev_tpage_set = prev_version_rid // max_records
+            prev_trid_in_page = prev_version_rid % max_records
+            for i in range(self.num_columns):
+                value = record[i]
+                if (value == None):
+                    value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].tailPage_directory[prev_tpage_set]["page"][prev_trid_in_page*64:prev_trid_in_page*64+struct.calcsize('i')])[0]
+                self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
+
         #update indirection column of base record
         packed_bytes = struct.pack('i', tail_rid)
         self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+len(packed_bytes)] = packed_bytes
@@ -89,7 +100,6 @@ class Table:
         self.page_directory[pages_start+1].write(self.rid) #rid column
         self.page_directory[pages_start+2].write(0) #time_stamp column
         self.page_directory[pages_start+3].write(0) #schema_encoding column
-        print(columns[self.key-4])
         self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
         self.rid += 1
 

@@ -25,7 +25,7 @@ record1 = [400, 200, 150, 100, 19]
 t.insert_record(*record1)
 
 print("testing update")
-record1 = [450, 130, 170, 380, 190]
+record1 = [450, None, 170, 380, 190]
 q.update(47, *record1)
 print(struct.unpack('i', t.page_directory[0].tailPage_directory[0]["page"][0*64:0*64+struct.calcsize('i')])[0])
 print(struct.unpack('i', t.page_directory[1].tailPage_directory[0]["page"][0*64:0*64+struct.calcsize('i')])[0])
@@ -40,3 +40,7 @@ print(struct.unpack('i', t.page_directory[8].tailPage_directory[0]["page"][0*64:
 record = q.select_version(47, 0, [1, 1, 1, 1, 1], -1)[0]
 print(record.columns)
 
+record1 = [32, 11, None, None, None]
+q.update(47, *record1)
+record = q.select_version(47, 0, [1, 1, 1, 1, 1], -1)[0]
+print(record.columns)

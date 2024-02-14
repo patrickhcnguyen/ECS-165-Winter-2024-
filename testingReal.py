@@ -32,9 +32,11 @@ for i in range(0, number_of_records):
     records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
     query.insert(*records[key])
     print('inserted', records[key])
+    max_records=64
+    page_set = i//max_records
+    rid=i%max_records
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[4+page_set*(5+4)].data[rid*64:rid*64+struct.calcsize('i')])[0])
 print("Insert finished")
-
-
 
 updated_records = {}
 k=-1
@@ -67,3 +69,4 @@ for key in records:
             error = True
     if error:
         print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', updated_records[key])
+
