@@ -1,5 +1,6 @@
 from table import Table, Record
 from index import Index
+import struct
 
 RID_COLUMN = 1
 
@@ -88,19 +89,29 @@ class Query:
         if rid is None:
             return False  # if primary key not found
 
-        # creating new tail record with updated columns
-        tail_rid = self.page_directory[rid % self.max_records].write_update(primary_key)
+        # creating new tail record containing updated columns
+
+        rid_within_page = rid % self.max_records
+        # updating the first column of the table, the indirection column 
+        # tail record of indirection column points to prev version of data -> will be -1 if the prev version is the base record, due to our implementation of insert_record
+        prev_version = struct.unpack('i', self.page_directory[rid // self.max_records].data[rid_within_page*64 : rid_within_page*64+struct.calcsize('i')])[0]
+        tail_rid = self.page_directory[rid // self.max_records].write_update(prev_version)
         if tail_rid == -1:
             return False  # if failed to create a tail record
+        
 
-        # updating the indirection column for the base record to point to the new tail record
-        base_page = self.page_directory[rid // self.max_records]
-        base_page.data[rid * 64: (rid * 64) + 8] = struct.pack('q', tail_rid)  
-
-        # updating other columns if needed
+        # updating the actual data columns
         for i, column_value in enumerate(columns):
             if column_value is not None:
                 self.page_directory[(rid // self.max_records) + i + 4].write_update(column_value)  # Skipping first 4 system columns
+            else:
+                prev_value = struct.unpack('i', self.page_directory[(rid // self.max_records) + i + 4].data[rid_within_page*64:rid_within_page*64+struct.calcsize('i')])[0]
+                self.page_directory[(rid // self.max_records) + i + 4].write_update(prev_value)
+            
+
+        # updating the indirection column for the base record to point to the new tail record
+        base_page = self.page_directory[rid // self.max_records]
+        base_page.data[rid_within_page * 64: (rid_within_page * 64) + 64] = struct.pack('i', tail_rid)  
 
         self.index.update_index(self.key, primary_key, rid, tail_rid)
         return True
