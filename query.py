@@ -106,23 +106,7 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        total_sum = 0
-        # iterating over range of primary keys
-        for key in range(start_range, end_range + 1):
-            # finding RID for current key using table's index
-            rid = self.index.locate(self.key, key)
-            if rid is not None:
-                # calculating which page and where in page record is at
-                max_records =  self.table.page_directory[0].max_records
-                page_number = rid // max_records
-                record_number = rid % max_records
-                page = self.page_directory[page_number]
-                value_bytes = page.data[record_number * 64 + (aggregate_column_index * 64): record_number * 64 + ((aggregate_column_index + 1) * 64)]
-                value = struct.unpack('i', value_bytes)[0] # bytes to integer 
-                total_sum += value # summing value
-        return total_sum
-
-
+        return self.table.sum_records(start_range, end_range, aggregate_column_index)
     
     """
     :param start_range: int         # Start of the key range to aggregate 

@@ -139,5 +139,31 @@ class Table:
         record_list = []
         record_list.append(new_record)
         return record_list
+    
+    def sum_records(self, start, end, column_index):
+        total_sum = 0
+        max_records = self.page_directory[0].max_records #64 records
+        # get all rid's within list
+        rid_list = self.index.locate_range(self.key, start, end)
+
+        for rid in rid_list:
+            base_record_index = rid % max_records
+            base_page_index = (rid // max_records)*(self.num_columns+4)
+            indirection_page = self.page_directory[base_page_index] # other version: change to only base_page_index
+            indirection = struct.unpack('i',indirection_page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+            if indirection == -1: # has not been updated (return record in base page)
+                page = self.page_directory[base_page_index + column_index + 4]
+                data = struct.unpack('i',page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+                # print(data)
+                total_sum += data
+            else: # has been updated, get tail page (return record in tail page)
+                tail_page = indirection // max_records
+                tail_page_index = indirection % max_records
+                page = self.page_directory[base_page_index + column_index + 4]
+                data = struct.unpack('i', page.tailPage_directory[tail_page]["page"][tail_page_index*64:tail_page_index*64+struct.calcsize('i')])[0] # other version: change to page_directory[base_page_index + i + self.num_columns]
+                # print(data)
+                total_sum += data
+        
+        return total_sum
 
 
