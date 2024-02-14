@@ -1,5 +1,5 @@
-from index import Index
-from page import Page
+from lstore.index import Index
+from lstore.page import Page
 from time import time
 
 #first 4 columns of all records are listed below:
@@ -10,11 +10,12 @@ SCHEMA_ENCODING_COLUMN = 3
 
 
 class Record:
-
     def __init__(self, rid, key, columns):
         self.rid = rid
         self.key = key
         self.columns = columns
+
+        
 
 class Table: 
 
@@ -48,20 +49,24 @@ class Table:
         pass
 
     def insert_record(self, *columns):
-        schema_encoding = '0' * self.table.num_columns
+        schema_encoding = '0' * self.num_columns
 
         latest_page = self.page_directory[-self.num_columns]
-        if latest_page.has_capacity() <= 0: #if there's no capacity
-            self.init_page_dir(self.num_columns) #create new page range
-        
-        self.table.page_directory[self.num_pages - self.num_columns].write(self.rid)
-        self.table.page_directory[self.num_pages - self.num_columns + 1].write(self.rid)
-        self.table.page_directory[self.num_pages - self.num_columns + 2].write(0)
-        self.table.page_directory[self.num_pages - self.num_columns + 3].write(schema_encoding)
-        for i in range(self.num_pages - self.num_columns + 4, self.num_pages):
-            self.table.page_directory[i].write(columns[i])
+        if latest_page.has_capacity() <= 0:  # if there's no capacity
+            self.init_page_dir(self.num_columns)  # create a new page range
 
-        self.table.index.add_index(RID_COLUMN, columns[self.key], self.rid) # add index
+        self.page_directory[self.num_pages - self.num_columns].write(self.rid)
+        self.page_directory[self.num_pages - self.num_columns + 1].write(self.rid)
+        self.page_directory[self.num_pages - self.num_columns + 2].write(0)
+        self.page_directory[self.num_pages - self.num_columns + 3].write(schema_encoding)
+
+        for i in range(self.num_pages - self.num_columns + 4, self.num_pages + 4):
+            self.page_directory[i].write(columns[i - (self.num_pages - self.num_columns + 4)])
+
+        self.index.add_index(self.key, columns[self.key], self.rid)  # add index
         self.rid += 1
+
+
+
 
 
