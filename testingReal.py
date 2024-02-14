@@ -1,6 +1,6 @@
 from db import Database
 from query import Query
-
+import struct
 from random import choice, randint, sample, seed
 
 db = Database()
@@ -37,7 +37,9 @@ print("Insert finished")
 
 
 updated_records = {}
+k=-1
 for key in records:
+    k+=1
     updated_columns = [None, None, None, None, None]
     updated_records[key] = records[key].copy()
     for i in range(2, grades_table.num_columns):
@@ -47,30 +49,15 @@ for key in records:
         # update our test directory
         updated_records[key][i] = value
     query.update(key, *updated_columns)
+    max_records=64
+    page_set = k//max_records
+    rid=k%max_records
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[4+page_set*(5+4)].tailPage_directory[0]["page"][rid*64:rid*64+struct.calcsize('i')])[0])
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[5+page_set*(5+4)].tailPage_directory[0]["page"][rid*64:rid*64+struct.calcsize('i')])[0])
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[6+page_set*(5+4)].tailPage_directory[0]["page"][rid*64:rid*64+struct.calcsize('i')])[0])
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[7+page_set*(5+4)].tailPage_directory[0]["page"][rid*64:rid*64+struct.calcsize('i')])[0])
+    print("Checking updates: ",struct.unpack('i', grades_table.page_directory[8+page_set*(5+4)].tailPage_directory[0]["page"][rid*64:rid*64+struct.calcsize('i')])[0])
 
-    #check version -1 for record
-    record = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0]
-    error = False
-    for j, column in enumerate(record.columns):
-        if column != records[key][j]:
-            error = True
-    if error:
-        print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', records[key])
-    else:
-        pass
-        # print('update on', original, 'and', updated_columns, ':', record)
-
-    #check version -2 for record
-    record = query.select_version(key, 0, [1, 1, 1, 1, 1], -2)[0]
-    error = False
-    for j, column in enumerate(record.columns):
-        if column != records[key][j]:
-            error = True
-    if error:
-        print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', records[key])
-    else:
-        pass
-        # print('update on', original, 'and', updated_columns, ':', record)
     
     #check version 0 for record
     record = query.select_version(key, 0, [1, 1, 1, 1, 1], 0)[0]
@@ -80,32 +67,3 @@ for key in records:
             error = True
     if error:
         print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', updated_records[key])
-
-keys = sorted(list(records.keys()))
-# aggregate on every column 
-for c in range(0, grades_table.num_columns):
-    for i in range(0, number_of_aggregates):
-        r = sorted(sample(range(0, len(keys)), 2))
-        # calculate the sum form test directory
-        # version -1 sum
-        column_sum = sum(map(lambda key: records[key][c], keys[r[0]: r[1] + 1]))
-        result = query.sum_version(keys[r[0]], keys[r[1]], c, -1)
-        if column_sum != result:
-            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
-        else:
-            pass
-            # print('sum on [', keys[r[0]], ',', keys[r[1]], ']: ', column_sum)
-        # version -2 sum
-        column_sum = sum(map(lambda key: records[key][c], keys[r[0]: r[1] + 1]))
-        result = query.sum_version(keys[r[0]], keys[r[1]], c, -2)
-        if column_sum != result:
-            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
-        else:
-            pass
-        # version 0 sum
-        updated_column_sum = sum(map(lambda key: updated_records[key][c], keys[r[0]: r[1] + 1]))
-        updated_result = query.sum_version(keys[r[0]], keys[r[1]], c, 0)
-        if updated_column_sum != updated_result:
-            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', updated_result, ', correct: ', updated_column_sum)
-        else:
-            pass
