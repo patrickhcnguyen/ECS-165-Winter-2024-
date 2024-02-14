@@ -44,3 +44,14 @@ print(struct.unpack('i', t.page_directory[5].tailPage_directory[0]["page"][0*64:
 print(struct.unpack('i',t.page_directory[5].data[1*64:1*64+struct.calcsize('i')])[0])
 print(struct.unpack('i', t.page_directory[5].tailPage_directory[0]["page"][1*64:1*64+struct.calcsize('i')])[0]) #tail record points back to base record
 
+print("hello")
+t1 = Table("hello", 5, 0)
+record1 = [45, 75, 80, 85, 90]
+record2 = [47, 80, 90, 100, 105]
+record3 = [47, 1, 2, 3, 4]
+t1.insert_record(*record1)
+t1.insert_record(*record2)
+print(t1.select_record(45, 1, [1,1,1,1,1]).columns)
+print(t1.select_record(47, 1, [1,1,1,1,1]).columns)
+t1.update_record(47, *record3)
+print(t1.select_record(47, 1, [1,1,1,1,1]).columns)

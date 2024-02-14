@@ -93,7 +93,39 @@ class Table:
         self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
         self.rid += 1
 
-    def select(self, search_key, search_key_index, projected_columns_index):
-        pass
+    def select_record(self, search_key, search_column, projected_columns_index):
+        # get index with search_key
+        # go to base page of record
+        # check indirection column (whether it has been updated or not)
+        # if it has been updated, go to tail page and find the record
+        # if it has not been updated, retrieve the projected_columns 
+        # create a record with the info and return it
+
+        key_rid = self.index.locate(self.key, search_key)
+        max_records = self.page_directory[0].max_records #64 records
+        base_record_index = key_rid[0] % max_records
+        base_page_index = key_rid[0] // max_records
+        indirection_page = self.page_directory[base_page_index] # other version: change to only base_page_index
+        print("columns", self.num_columns)
+        indirection = struct.unpack('i',indirection_page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+
+        columns = []
+        if indirection == -1: # has not been updated (return record in base page)
+            for i in range(len(projected_columns_index)):
+                if projected_columns_index[i] == 1:
+                    page = self.page_directory[base_page_index + i + 4]
+                    data = struct.unpack('i',page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+                    columns.append(data)
+        else: # has been updated, get tail page (return record in tail page)
+            tail_page = indirection // max_records
+            tail_page_index = indirection % max_records
+            for i in range(len(projected_columns_index)):
+                if projected_columns_index[i] == 1:
+                    page = self.page_directory[base_page_index + i + 4]
+                    data = struct.unpack('i', page.tailPage_directory[tail_page]["page"][tail_page_index*64:tail_page_index*64+struct.calcsize('i')])[0] # other version: change to page_directory[base_page_index + i + self.num_columns]
+                    columns.append(data)
+
+        new_record = Record(key_rid, search_key, columns)
+        return new_record
 
 

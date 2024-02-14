@@ -64,7 +64,7 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, search_key, search_key_index, projected_columns_index):
-        pass
+        self.table.select_record(search_key, search_key_index, projected_columns_index)
 
     
     """
