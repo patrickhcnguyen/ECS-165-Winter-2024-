@@ -126,6 +126,8 @@ class Table:
                     columns.append(data)
 
         new_record = Record(key_rid, search_key, columns)
-        return new_record
+        record_list = []
+        record_list.append(new_record)
+        return record_list
 
 

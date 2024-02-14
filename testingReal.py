@@ -59,3 +59,53 @@ for key in records:
     else:
         pass
         # print('update on', original, 'and', updated_columns, ':', record)
+
+    #check version -2 for record
+    record = query.select_version(key, 0, [1, 1, 1, 1, 1], -2)[0]
+    error = False
+    for j, column in enumerate(record.columns):
+        if column != records[key][j]:
+            error = True
+    if error:
+        print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', records[key])
+    else:
+        pass
+        # print('update on', original, 'and', updated_columns, ':', record)
+    
+    #check version 0 for record
+    record = query.select_version(key, 0, [1, 1, 1, 1, 1], 0)[0]
+    error = False
+    for j, column in enumerate(record.columns):
+        if column != updated_records[key][j]:
+            error = True
+    if error:
+        print('update error on', records[key], 'and', updated_columns, ':', record, ', correct:', updated_records[key])
+
+keys = sorted(list(records.keys()))
+# aggregate on every column 
+for c in range(0, grades_table.num_columns):
+    for i in range(0, number_of_aggregates):
+        r = sorted(sample(range(0, len(keys)), 2))
+        # calculate the sum form test directory
+        # version -1 sum
+        column_sum = sum(map(lambda key: records[key][c], keys[r[0]: r[1] + 1]))
+        result = query.sum_version(keys[r[0]], keys[r[1]], c, -1)
+        if column_sum != result:
+            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
+        else:
+            pass
+            # print('sum on [', keys[r[0]], ',', keys[r[1]], ']: ', column_sum)
+        # version -2 sum
+        column_sum = sum(map(lambda key: records[key][c], keys[r[0]: r[1] + 1]))
+        result = query.sum_version(keys[r[0]], keys[r[1]], c, -2)
+        if column_sum != result:
+            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
+        else:
+            pass
+        # version 0 sum
+        updated_column_sum = sum(map(lambda key: updated_records[key][c], keys[r[0]: r[1] + 1]))
+        updated_result = query.sum_version(keys[r[0]], keys[r[1]], c, 0)
+        if updated_column_sum != updated_result:
+            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', updated_result, ', correct: ', updated_column_sum)
+        else:
+            pass
