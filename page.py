@@ -28,7 +28,7 @@ class Page: #This class manages a single base page and ALL tail pages that corre
         self.num_tails += 1
         tail_dict = {"page": bytearray(self.max_records*64), "num_records": 0}
         self.tailPage_directory[self.num_tails] = tail_dict
-        print("created new tail")
+        # print("created new tail")
 
     def tail_has_capacity(self): #returns the amount of ints that can be added to the last tail page before the max_records capacity is reached
         return (self.max_records-self.tailPage_directory[self.num_tails]["num_records"])

@@ -17,7 +17,6 @@ class Index:
     def locate(self, column, value):
         # rid_value = self.indices[column].search(value) #finds
         rid_value = self.indices[column].values(value,value) 
-        print(list(rid_value))
         return list(rid_value) # return the RID of value
     
     """
