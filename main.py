@@ -1,5 +1,5 @@
-from page import Page
-from table import Table
+from lstore.page import Page
+from lstore.table import Table
 import struct
 
 print("howdy")

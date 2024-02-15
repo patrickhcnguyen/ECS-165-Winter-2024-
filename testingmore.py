@@ -1,7 +1,7 @@
-from page import Page
-from table import Table
+from lstore.page import Page
+from lstore.table import Table
 import struct
-from query import Query
+from lstore.query import Query
 
 print("howdy")
 t = Table("howdy", 5, 0)

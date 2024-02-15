@@ -1,5 +1,5 @@
-from index import Index
-from page import Page
+from lstore.index import Index
+from lstore.page import Page
 from time import time
 import struct
 

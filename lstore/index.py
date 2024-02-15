@@ -7,7 +7,7 @@ RID_COLUMN = 1
 class Index:
 
     def __init__(self, table):
-        self.indices = [None] *  table.num_columns # Indices store the b-tree for each column that stores all the indexes for that specific column
+        self.indices = [None] *  (table.num_columns+4) # Indices store the b-tree for each column that stores all the indexes for that specific column
         # self.indices[RID_COLUMN] = BTree(BTREE_DEGREE) # Initializes indexes for key column
         self.table = table
 
