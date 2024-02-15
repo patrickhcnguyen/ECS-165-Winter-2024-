@@ -28,7 +28,7 @@ class Table:
     def __init__(self, name, num_columns, key):
         self.name = name
         self.key = key+4
-        self.num_columns = num_columns
+        self.num_columns = num_columns #excludes the 4 columns written above
         self.page_directory = {}
         self.num_pages = -1 #stores the amount of pages minus 1
         self.init_page_dir(self.num_columns)
