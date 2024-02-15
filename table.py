@@ -150,24 +150,20 @@ class Table:
         for rid in rid_list:
             base_record_index = rid % max_records
             base_page_index = (rid // max_records)*(self.num_columns+4)
-            #check if record is marked for deletion
-            schema_encoding_page = self.page_directory[3+base_page_index] # other version: change to only base_page_index
-            schema_encoding = struct.unpack('i',schema_encoding_page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
-            if schema_encoding != 1:
-                indirection_page = self.page_directory[base_page_index] # other version: change to only base_page_index
-                indirection = struct.unpack('i',indirection_page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
-                if indirection == -1: # has not been updated (return record in base page)
-                    page = self.page_directory[base_page_index + column_index + 4]
-                    data = struct.unpack('i',page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
-                    # print(data)
-                    total_sum += data
-                else: # has been updated, get tail page (return record in tail page)
-                    tail_page = indirection // max_records
-                    tail_page_index = indirection % max_records
-                    page = self.page_directory[base_page_index + column_index + 4]
-                    data = struct.unpack('i', page.tailPage_directory[tail_page]["page"][tail_page_index*64:tail_page_index*64+struct.calcsize('i')])[0] # other version: change to page_directory[base_page_index + i + self.num_columns]
-                    # print(data)
-                    total_sum += data
+            indirection_page = self.page_directory[base_page_index] # other version: change to only base_page_index
+            indirection = struct.unpack('i',indirection_page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+            if indirection == -1: # has not been updated (return record in base page)
+                page = self.page_directory[base_page_index + column_index + 4]
+                data = struct.unpack('i',page.data[base_record_index*64:base_record_index*64+struct.calcsize('i')])[0]
+                # print(data)
+                total_sum += data
+            else: # has been updated, get tail page (return record in tail page)
+                tail_page = indirection // max_records
+                tail_page_index = indirection % max_records
+                page = self.page_directory[base_page_index + column_index + 4]
+                data = struct.unpack('i', page.tailPage_directory[tail_page]["page"][tail_page_index*64:tail_page_index*64+struct.calcsize('i')])[0] # other version: change to page_directory[base_page_index + i + self.num_columns]
+                # print(data)
+                total_sum += data
         
         return total_sum
 
