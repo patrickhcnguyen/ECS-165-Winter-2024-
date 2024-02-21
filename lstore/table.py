@@ -29,18 +29,29 @@ class Table:
         self.name = name
         self.key = key+4
         self.num_columns = num_columns #excludes the 4 columns written above
+
         self.page_directory = {}
+        self.tail_page_directory = {}
         self.num_pages = -1 #stores the amount of pages minus 1
-        self.init_page_dir(self.num_columns)
+        self.num_tail_pages = -1 #stores the amount of pages minus 1
+        self.init_page_dir()
+        self.init_tail_page_dir()
+
         self.index = Index(self)
         self.index.create_index(self.key)
         self.rid = 0
         pass
 
-    def init_page_dir(self, num_columns): #adds one page-range of pages to the page_directory, if the base pages have filled up or to initialize the page directory
-        for i in range(num_columns+4):
+    def init_page_dir(self): #adds one set of physical pages to the page_directory, in case the base pages have filled up or to initialize the page directory
+        for i in range(self.num_columns+4):
             self.num_pages += 1
-            self.page_directory[self.num_pages] = Page() #each "Page" manages one base page and all tail pages to that one base page
+            self.page_directory[self.num_pages] = Page()
+        pass
+
+    def init_tail_page_dir(self): #adds one set of physical pages to the tail_page_directory, in case the tail pages have filled up or to initialize the tail page directory
+        for i in range(self.num_columns+4):
+            self.num_tail_pages += 1
+            self.tail_page_directory[self.num_tail_pages] = Page()
         pass
     
     def __merge(self):
@@ -49,43 +60,46 @@ class Table:
 
 
     def update_record(self, key, *record): 
-        key_rid = self.index.locate(self.key, key) #get the row number of the inputted key
+        key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
-        page_set = key_rid[0] // max_records #select the page range that row falls in
-        rid_in_page = key_rid[0] % max_records
+        page_set = key_rid // max_records #select the base page (page set) that row falls in
         
+        latest_tail_page = self.tail_page_directory[self.num_tail_pages]
+        if latest_tail_page.has_capacity() <= 0: #if there's no capacity
+            self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
+        pages_start = (self.num_tail_pages+1) - (self.num_columns+4)
+
         # write the first 4 columns of the tail record: indirection column, rid, schema_encoding, and time_stamp
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
-        prev_version_rid = struct.unpack('i',self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
-        tail_rid = self.page_directory[page_set*(self.num_columns+4)].write_update(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
-        
-        self.page_directory[1+page_set*(self.num_columns+4)].write_update(tail_rid) #Writing to the tail's rid column
-        self.page_directory[2+page_set*(self.num_columns+4)].write_update(0)
-        self.page_directory[3+page_set*(self.num_columns+4)].write_update(0)
+        prev_version_rid = self.page_directory[page_set*(self.num_columns+4)].read_val(key_rid)
+        index_within_page = self.tail_page_directory[pages_start].write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
+        tail_rid = index_within_page + (pages_start // (self.num_columns+4))*(max_records)
+
+        self.tail_page_directory[1+pages_start].write(tail_rid) #Writing to the tail's rid column
+        self.tail_page_directory[2+pages_start].write(0)
+        self.tail_page_directory[3+pages_start].write(0)
         
         # write the actual data columns of the tail record
         if (prev_version_rid == -1): # reference the base record during the update
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
-                    value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+struct.calcsize('i')])[0]
-                self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
+                    value = self.page_directory[i+4+page_set*(self.num_columns+4)].read_val(key_rid)
+                self.tail_page_directory[i+4+pages_start].write(value)
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
             prev_trid_in_page = prev_version_rid % max_records
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
-                    value = struct.unpack('i',self.page_directory[i+4+page_set*(self.num_columns+4)].tailPage_directory[prev_tpage_set]["page"][prev_trid_in_page*64:prev_trid_in_page*64+struct.calcsize('i')])[0]
-                self.page_directory[i+4+page_set*(self.num_columns+4)].write_update(value)
+                    value = self.tail_page_directory[i+4+prev_tpage_set*(self.num_columns+4)].read_val(prev_version_rid)
+                self.tail_page_directory[i+4+pages_start].write(value)
 
         #update indirection column of base record
-        packed_bytes = struct.pack('i', tail_rid)
-        self.page_directory[page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+len(packed_bytes)] = packed_bytes
+        self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
-        packed_bytes = struct.pack('i', 1)
-        self.page_directory[3+page_set*(self.num_columns+4)].data[rid_in_page*64:rid_in_page*64+len(packed_bytes)] = packed_bytes
+        self.page_directory[page_set*(self.num_columns+4)].read_val(1)
         return
 
 
@@ -94,7 +108,7 @@ class Table:
 
         latest_page = self.page_directory[self.num_pages]
         if latest_page.has_capacity() <= 0: #if there's no capacity
-            self.init_page_dir(self.num_columns) #create new page range
+            self.init_page_dir() #add one base page (a set of physical pages, one for each column)
         
         pages_start = (self.num_pages+1) - (self.num_columns+4)
         for i in range(self.num_columns):
