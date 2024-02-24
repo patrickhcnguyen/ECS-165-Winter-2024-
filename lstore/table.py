@@ -166,6 +166,46 @@ class Table:
         record_list.append(new_record)
         return record_list
     
+    def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
+        key_rid = (self.index.locate(self.key, search_key))[0]
+        max_records = self.page_directory[0].max_records #64 records
+        base_page_index = (key_rid // max_records)*(self.num_columns+4)
+        indirection = self.page_directory[base_page_index].read_val(key_rid) # other version: change to only base_page_index
+
+        columns = []
+        if indirection == -1: # has not been updated (return record in base page)
+            for i in range(len(projected_columns_index)):
+                if projected_columns_index[i] == 1:
+                    data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
+                    columns.append(data)
+        else: # has been updated, get tail page (return record in tail page with correct version)
+            tail_page_index = (indirection // max_records)*(self.num_columns+4)
+            counter = -version_num # how many times we have to go back
+            has_past = True # if there is more versions before the current tail record
+            while(counter > 0 and has_past):
+                tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
+                counter -= 1
+                # print("new_indirection", indirection)
+                if indirection == -1:
+                    has_past = False
+            if has_past:
+                for i in range(len(projected_columns_index)):
+                    if projected_columns_index[i] == 1:
+                        data = self.tail_page_directory[tail_page_index + i + 4].read_val(indirection)
+                        columns.append(data)
+            else:
+                for i in range(len(projected_columns_index)):
+                    if projected_columns_index[i] == 1:
+                        data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
+                        columns.append(data)
+
+        new_record = Record(key_rid, search_key, columns)
+        record_list = []
+        record_list.append(new_record)
+        return record_list
+
+    
     def sum_records(self, start, end, column_index):
         total_sum = 0
         max_records = self.page_directory[0].max_records #64 records
