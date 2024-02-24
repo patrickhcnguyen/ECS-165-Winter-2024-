@@ -121,7 +121,11 @@ class Query:
     # Returns False if no record exists in the given range
     """
     def sum_version(self, start_range, end_range, aggregate_column_index, relative_version):
-        return self.table.sum_records(start_range, end_range, aggregate_column_index)
+        result = self.table.sum_records_version(start_range, end_range, aggregate_column_index, relative_version)
+        if result:
+            return result
+        else:
+            return False
 
     
     """

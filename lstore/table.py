@@ -182,11 +182,10 @@ class Table:
             tail_page_index = (indirection // max_records)*(self.num_columns+4)
             counter = -version_num # how many times we have to go back
             has_past = True # if there is more versions before the current tail record
-            while(counter > 0 and has_past):
+            while(counter > 0 and has_past): # keep going back until it reaches the desired version
                 tail_page_index = (indirection // max_records)*(self.num_columns+4)
                 indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
                 counter -= 1
-                # print("new_indirection", indirection)
                 if indirection == -1:
                     has_past = False
             if has_past:
@@ -194,7 +193,7 @@ class Table:
                     if projected_columns_index[i] == 1:
                         data = self.tail_page_directory[tail_page_index + i + 4].read_val(indirection)
                         columns.append(data)
-            else:
+            else: # if it's asking for versions that doesn't exist, return base page
                 for i in range(len(projected_columns_index)):
                     if projected_columns_index[i] == 1:
                         data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
@@ -227,4 +226,41 @@ class Table:
         
         return total_sum
 
+    def sum_records_version(self, start, end, column_index, version_num):
+        total_sum = 0
+        max_records = self.page_directory[0].max_records #64 records
+        # get all rid's within list
+        rid_list = self.index.locate_range(self.key, start, end)
+        if len(rid_list) == 0:
+            return None
+
+        for rid in rid_list:
+            base_page_index = (rid // max_records)*(self.num_columns+4)
+            indirection = self.page_directory[base_page_index].read_val(rid)
+            if indirection == -1: # has not been updated (return record in base page)
+                data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
+                total_sum += data
+                print("base for", rid)
+            else: # has been updated, get tail page (return record in tail page)
+                # tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                # data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
+                # total_sum += data
+                print("tail for", rid)
+                counter = -version_num # how many times we have to go back
+                has_past = True # if there is more versions before the current tail record
+                while(counter > 0 and has_past): # keep going back until it reaches the desired version
+                    tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                    indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
+                    counter -= 1
+                    if indirection == -1:
+                        has_past = False
+                if has_past:
+                    tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                    data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
+                    total_sum += data
+                else: # if it's asking for versions that doesn't exist
+                    data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
+                    total_sum += data
+        
+        return total_sum
 
