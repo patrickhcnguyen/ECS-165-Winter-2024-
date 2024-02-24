@@ -171,6 +171,8 @@ class Table:
         max_records = self.page_directory[0].max_records #64 records
         # get all rid's within list
         rid_list = self.index.locate_range(self.key, start, end)
+        if len(rid_list) == 0:
+            return None
 
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)

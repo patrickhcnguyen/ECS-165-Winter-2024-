@@ -105,7 +105,11 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        return self.table.sum_records(start_range, end_range, aggregate_column_index)
+        result = self.table.sum_records(start_range, end_range, aggregate_column_index)
+        if result:
+            return result
+        else:
+            return False
     
     """
     :param start_range: int         # Start of the key range to aggregate 
