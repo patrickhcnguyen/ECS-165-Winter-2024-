@@ -56,9 +56,25 @@ class Table:
     
     def __merge(self):
         print("merge is happening")
+        # add baseRID column to tail pages (not in this function but in page directory)
+        # get all the tail pages in an array or excluding metadata
+        # initialize
+            # an empty basePageCopies dictionary, key: page number, value: base page
+            # updatedQueue list to store RIDs we've checked to
+        # for loop that goes from latest to earliest tail page
+            # check if RID has been updated, if it is, skip tail record
+            # if RID is not updated 
+                # check if page number of RID is in basePageCopies
+                    #retrieve if it is and get it from pageDirectory if not and insert into basePageCopies
+                # get the base page record and switch out values from the tail page as necessary
+            # insert it back into the updated basePageCopies
+        # insert all of the base page copies back into page directory
+        # fix the metadata columns somehow somewhere in the code (in place update) ....
+        # iterate through all of the tail pages
         pass
 
 
+    # QUERY FUNCTIONS
     def update_record(self, key, *record): 
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
