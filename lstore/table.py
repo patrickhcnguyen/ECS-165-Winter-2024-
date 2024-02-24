@@ -177,12 +177,10 @@ class Table:
             indirection = self.page_directory[base_page_index].read_val(rid) # other version: change to only base_page_index
             if indirection == -1: # has not been updated (return record in base page)
                 data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
-                # print(data)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
                 tail_page_index = (indirection // max_records)*(self.num_columns+4)
-                data = self.page_directory[tail_page_index + column_index + 4].read_val(indirection)
-                # print(data)
+                data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
                 total_sum += data
         
         return total_sum
