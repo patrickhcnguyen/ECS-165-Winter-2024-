@@ -240,12 +240,7 @@ class Table:
             if indirection == -1: # has not been updated (return record in base page)
                 data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
                 total_sum += data
-                print("base for", rid)
             else: # has been updated, get tail page (return record in tail page)
-                # tail_page_index = (indirection // max_records)*(self.num_columns+4)
-                # data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
-                # total_sum += data
-                print("tail for", rid)
                 counter = -version_num # how many times we have to go back
                 has_past = True # if there is more versions before the current tail record
                 while(counter > 0 and has_past): # keep going back until it reaches the desired version
