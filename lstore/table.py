@@ -39,7 +39,7 @@ class Table:
 
         self.index = Index(self)
         self.index.create_index(self.key)
-        self.rid = 0
+        self.rid = 0  #rid of the next spot in the page range (not of the latest record)
         
         self.total_tail_records = 0
         self.tps = 0
@@ -152,7 +152,6 @@ class Table:
         self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.page_directory[page_set*(self.num_columns+4)].read_val(1)
-        self.tail_rid += 1
         return
 
 
