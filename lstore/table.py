@@ -113,7 +113,7 @@ class Table:
         self.total_tail_records += 1
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
-        page_set = key_rid // max_records #select the base page (page set) that row falls in
+        page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         
         latest_tail_page = self.tail_page_directory[self.num_tail_pages]
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
@@ -152,6 +152,7 @@ class Table:
         self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.page_directory[page_set*(self.num_columns+4)].read_val(1)
+        self.tail_rid += 1
         return
 
 
