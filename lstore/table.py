@@ -39,7 +39,8 @@ class Table:
 
         self.index = Index(self)
         self.index.create_index(self.key)
-        self.rid = 0
+        self.rid = 0 #rid of the next spot in the page range (not of the latest record)
+        self.tail_rid = 0 #rid of the next spot in the tail pages (not of the latest record); could also interpret as num_tail_records
         pass
 
     def init_page_dir(self): #adds one set of physical pages to the page_directory, in case the base pages have filled up or to initialize the page directory
@@ -78,7 +79,7 @@ class Table:
     def update_record(self, key, *record): 
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
-        page_set = key_rid // max_records #select the base page (page set) that row falls in
+        page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         
         latest_tail_page = self.tail_page_directory[self.num_tail_pages]
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
@@ -116,6 +117,7 @@ class Table:
         self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.page_directory[page_set*(self.num_columns+4)].read_val(1)
+        self.tail_rid += 1
         return
 
 
