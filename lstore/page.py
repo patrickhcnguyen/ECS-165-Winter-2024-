@@ -30,3 +30,11 @@ class Page: #This class manages a physical page; the table class is in charge of
         index_within_page = rid % self.max_records
         value = struct.unpack('i', self.data[index_within_page*64:index_within_page*64+struct.calcsize('i')])[0]
         return value
+    
+    # creates a shallow copy of the instance
+    def copy(self):
+        new_instance = Page()
+        new_instance.num_records = self.num_records
+        new_instance.max_records = self.max_records
+        new_instance.data = self.data[:]
+        return new_instance

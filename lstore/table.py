@@ -40,6 +40,9 @@ class Table:
         self.index = Index(self)
         self.index.create_index(self.key)
         self.rid = 0
+        
+        self.total_tail_records = 0
+        self.tps = 0
         pass
 
     def init_page_dir(self): #adds one set of physical pages to the page_directory, in case the base pages have filled up or to initialize the page directory
@@ -49,15 +52,14 @@ class Table:
         pass
 
     def init_tail_page_dir(self): #adds one set of physical pages to the tail_page_directory, in case the tail pages have filled up or to initialize the tail page directory
-        for i in range(self.num_columns+4):
+        for i in range(self.num_columns+5):
             self.num_tail_pages += 1
             self.tail_page_directory[self.num_tail_pages] = Page()
         pass
     
-    def __merge(self):
-        print("merge is happening")
+    def merge(self): # CHANGE BACK TO __merge
         # add baseRID column to tail pages (not in this function but in page directory)
-        # get all the tail pages in an array or excluding metadata
+        # get all the tail pages in an array
         # initialize
             # an empty basePageCopies dictionary, key: page number, value: base page
             # updatedQueue list to store RIDs we've checked to
@@ -71,11 +73,44 @@ class Table:
         # insert all of the base page copies back into page directory
         # fix the metadata columns somehow somewhere in the code (in place update) ....
         # iterate through all of the tail pages
-        pass
+        # set tps = latest tail record of the current merge cycle
 
+        print("merge is happening...")
+        tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
+        base_page_copies = {}
+        updatedQueue = set()
+        max_records = 64
+
+        for i in reversed(range(self.total_tail_records - self.tps)):
+            tail_rid = i + self.tps
+            tail_page_index = (tail_rid // max_records)*(self.num_columns + 5)
+
+            base_rid = tail_records[tail_page_index + 4 + self.num_columns].read_val(tail_rid)
+            base_page_index = (base_rid // max_records)*(self.num_columns + 4)
+
+            print("base id", base_rid)
+            if base_rid not in updatedQueue: # skips merge if base page rid is already in updated_queue
+                print("merged")
+                for i in range(self.num_columns): # replaces values of base record with latest tail record
+                    value = tail_records[tail_page_index + 4 + i].read_val(tail_rid)
+                    base_page = None
+                    if (base_page_index + 4 + i) in base_page_copies:
+                        base_page = base_page_copies[base_page_index + 4 + i]
+                    else:
+                        base_page = self.page_directory[base_page_index + 4 + i].copy() #BUFFERPOOL FIX: obtain copy from disk 
+                        base_page_copies[base_page_index + 4 + i] = base_page
+                    base_page.overwrite(base_rid, value)
+
+            updatedQueue.add(base_rid)
+
+        for page_num in base_page_copies:
+            self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk
+
+        self.tps = self.total_tail_records
 
     # QUERY FUNCTIONS
-    def update_record(self, key, *record): 
+    def update_record(self, key, *record):
+        self.total_tail_records += 1
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (page set) that row falls in
@@ -83,14 +118,14 @@ class Table:
         latest_tail_page = self.tail_page_directory[self.num_tail_pages]
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
             self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
-        pages_start = (self.num_tail_pages+1) - (self.num_columns+4)
+        pages_start = (self.num_tail_pages+1) - (self.num_columns+5)
 
         # write the first 4 columns of the tail record: indirection column, rid, schema_encoding, and time_stamp
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = self.page_directory[page_set*(self.num_columns+4)].read_val(key_rid)
         index_within_page = self.tail_page_directory[pages_start].write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
-        tail_rid = index_within_page + (pages_start // (self.num_columns+4))*(max_records)
+        tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
 
         self.tail_page_directory[1+pages_start].write(tail_rid) #Writing to the tail's rid column
         self.tail_page_directory[2+pages_start].write(0)
@@ -111,6 +146,7 @@ class Table:
                 if (value == None):
                     value = self.tail_page_directory[i+4+prev_tpage_set*(self.num_columns+4)].read_val(prev_version_rid)
                 self.tail_page_directory[i+4+pages_start].write(value)
+        self.tail_page_directory[self.num_columns+4+pages_start].write(key_rid)
 
         #update indirection column of base record
         self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
@@ -155,7 +191,7 @@ class Table:
                     data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
                     columns.append(data)
         else: # has been updated, get tail page (return record in tail page)
-            tail_page_index = (indirection // max_records)*(self.num_columns+4)
+            tail_page_index = (indirection // max_records)*(self.num_columns+5)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
                     data = self.tail_page_directory[tail_page_index + i + 4].read_val(indirection)
