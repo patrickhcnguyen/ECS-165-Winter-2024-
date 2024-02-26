@@ -42,7 +42,7 @@ class Table:
         self.rid = 0  #rid of the next spot in the page range (not of the latest record)
         
         self.total_tail_records = 0
-        self.tps = 0
+        self.tps = 0 # INDEX FIX: Should be an array that represents each column
         pass
 
     def init_page_dir(self): #adds one set of physical pages to the page_directory, in case the base pages have filled up or to initialize the page directory
@@ -94,13 +94,20 @@ class Table:
                 for i in range(self.num_columns): # replaces values of base record with latest tail record
                     value = tail_records[tail_page_index + 4 + i].read_val(tail_rid)
                     base_page = None
-                    if (base_page_index + 4 + i) in base_page_copies:
+                    if (base_page_index + 4 + i) in base_page_copies: # if page has been stored, retrieve it from memory
                         base_page = base_page_copies[base_page_index + 4 + i]
-                    else:
+                    else: # else retrieve it from disk
                         base_page = self.page_directory[base_page_index + 4 + i].copy() #BUFFERPOOL FIX: obtain copy from disk 
                         base_page_copies[base_page_index + 4 + i] = base_page
                     base_page.overwrite(base_rid, value)
 
+                # in place updated for metadata
+                if (base_page_index + 3) in base_page_copies: # if page has been stored, retrieve it from memory
+                    base_page_copies[base_page_index + 3].overwrite(base_rid, 0)
+                else: # else retrieve it from disk
+                    base_page = self.page_directory[base_page_index + 3].copy() #BUFFERPOOL FIX: obtain copy from disk 
+                    base_page_copies[base_page_index + 3] = base_page
+                    base_page.overwrite(base_rid, 0)
             updatedQueue.add(base_rid)
 
         for page_num in base_page_copies:
@@ -185,7 +192,7 @@ class Table:
         base_page_index = (key_rid // max_records)*(self.num_columns+4)
         indirection = self.page_directory[base_page_index].read_val(key_rid) # other version: change to only base_page_index
         columns = []
-        if indirection == -1: # has not been updated (return record in base page)
+        if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
                     data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
@@ -209,7 +216,7 @@ class Table:
         indirection = self.page_directory[base_page_index].read_val(key_rid) # other version: change to only base_page_index
 
         columns = []
-        if indirection == -1: # has not been updated (return record in base page)
+        if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
                     data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
@@ -222,7 +229,7 @@ class Table:
                 tail_page_index = (indirection // max_records)*(self.num_columns+4)
                 indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
                 counter -= 1
-                if indirection == -1:
+                if indirection == -1 or indirection < self.tps:
                     has_past = False
             if has_past:
                 for i in range(len(projected_columns_index)):
@@ -252,7 +259,7 @@ class Table:
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)
             indirection = self.page_directory[base_page_index].read_val(rid) # other version: change to only base_page_index
-            if indirection == -1: # has not been updated (return record in base page)
+            if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
                 data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
@@ -273,7 +280,7 @@ class Table:
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)
             indirection = self.page_directory[base_page_index].read_val(rid)
-            if indirection == -1: # has not been updated (return record in base page)
+            if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
                 data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
@@ -283,7 +290,7 @@ class Table:
                     tail_page_index = (indirection // max_records)*(self.num_columns+4)
                     indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
                     counter -= 1
-                    if indirection == -1:
+                    if indirection == -1 or indirection < self.tps:
                         has_past = False
                 if has_past:
                     tail_page_index = (indirection // max_records)*(self.num_columns+4)
