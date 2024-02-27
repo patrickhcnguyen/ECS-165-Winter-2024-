@@ -5,7 +5,7 @@ class Page: #This class manages a physical page; the table class is in charge of
 
     def __init__(self):
         self.num_records = 0
-        self.max_records = 5 #page size is 64records*64bits_per_record= 4096 bytes for now, but we can experiement which will maximize read and merge performance
+        self.max_records = 64 #page size is 64records*64bits_per_record= 4096 bytes for now, but we can experiement which will maximize read and merge performance
         self.data = bytearray(self.max_records*64) #holds a page-size worth of memory to dedicate for base data; our base page
         self.is_dirty = 0
         self.pin = 0

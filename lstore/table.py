@@ -31,6 +31,7 @@ class Table:
         self.name = name
         self.key = key+4
         self.num_columns = num_columns #excludes the 4 columns written above
+        self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
 
         #organize folders related to this table
         self.path = path
@@ -89,7 +90,7 @@ class Table:
         tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         base_page_copies = {}
         updatedQueue = set()
-        max_records = 64
+        max_records = self.max_records
 
         for i in reversed(range(self.total_tail_records - self.tps)): #ex. if there are 40 tail records (latest rid=39) and tps at rid=27 (tail-record with rid=27 and beyond still need to be merged), then creates a range from 12 to 0
             tail_rid = i + self.tps
@@ -128,7 +129,7 @@ class Table:
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
-        max_records = 64 #this is defined in the page class as 64 records
+        max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         #if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
         #    self.__merge()
@@ -144,6 +145,7 @@ class Table:
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).read_val(key_rid)
         index_within_page = self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
+        #print("indirection column should be ",)
         tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
         self.bufferpool.get_page(self.name, 1+pages_start, False).write(tail_rid) #Writing to the tail's rid column
         self.bufferpool.get_page(self.name, 2+pages_start, False).write(0)
@@ -158,12 +160,15 @@ class Table:
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
-            prev_trid_in_page = prev_version_rid % max_records
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
                     value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
+                    print("get val from indirection: ", value)
+                page0 = self.bufferpool.get_page(self.name, pages_start, False)
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
+                num_records=page0.num_records
+                print("p", page0.read_val(num_records-1))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
@@ -198,7 +203,7 @@ class Table:
         # create a record with the info and return it
 
         key_rid = (self.index.locate(self.key, search_key))[0]
-        max_records = 64 #64 records
+        max_records = self.max_records #64 records
         base_page_index = (key_rid // max_records)*(self.num_columns+4)
         indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
         columns = []
@@ -221,7 +226,7 @@ class Table:
     
     def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
         key_rid = (self.index.locate(self.key, search_key))[0]
-        max_records = self.page_directory[0].max_records #64 records
+        max_records = self.max_records #64 records
         base_page_index = (key_rid // max_records)*(self.num_columns+4)
         indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
 
