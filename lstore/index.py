@@ -16,6 +16,11 @@ class Index:
             raise ValueError(f"No index found for column {column}.")
         return [rid for key, rids in self.indices[column].items() if begin <= key <= end for rid in rids]
 
+    def remove_index(self, column, value, rid):
+        if rid not in self.indices[column][value]:
+            return
+        self.indices[column][value].remove(rid)
+
     def add_index(self, column, key, rid):
         # Ensure the column has an index before adding
         if self.indices[column] is None:
