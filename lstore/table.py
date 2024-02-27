@@ -57,7 +57,7 @@ class Table:
             self.tail_page_directory[self.num_tail_pages] = Page()
         pass
     
-    def merge(self): # CHANGE BACK TO __merge
+    def __merge(self): # CHANGE BACK TO __merge
         # add baseRID column to tail pages (not in this function but in page directory)
         # get all the tail pages in an array
         # initialize
@@ -75,7 +75,7 @@ class Table:
         # iterate through all of the tail pages
         # set tps = latest tail record of the current merge cycle
 
-        print("merge is happening...")
+        #print("merge is happening...")
         tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         base_page_copies = {}
         updatedQueue = set()
@@ -121,7 +121,7 @@ class Table:
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            self.merge()
+            self.__merge()
 
         self.total_tail_records += 1
         latest_tail_page = self.tail_page_directory[self.num_tail_pages]
@@ -264,7 +264,7 @@ class Table:
                 data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
-                tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                tail_page_index = (indirection // max_records)*(self.num_columns+5)
                 data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
                 total_sum += data
         
@@ -288,13 +288,13 @@ class Table:
                 counter = -version_num # how many times we have to go back
                 has_past = True # if there is more versions before the current tail record
                 while(counter > 0 and has_past): # keep going back until it reaches the desired version
-                    tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                    tail_page_index = (indirection // max_records)*(self.num_columns+5)
                     indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
                     counter -= 1
                     if indirection == -1 or indirection < self.tps:
                         has_past = False
                 if has_past:
-                    tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                    tail_page_index = (indirection // max_records)*(self.num_columns+5)
                     data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
                     total_sum += data
                 else: # if it's asking for versions that doesn't exist
