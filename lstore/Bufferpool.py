@@ -37,31 +37,6 @@ class BufferPool:
     def isFull(self):
         return self.LRU.isFull()
 
-    def bufferid_path_csv(self, buffer_id):
-        # Generate the file path for a buffer page based on buffer_id
-        dirname = Path(self.path) / str(buffer_id[2]) / str(buffer_id[3]) / buffer_id[1]
-        file_path = dirname / f"{buffer_id[4]}.csv"
-        return file_path
-
-    def get_page(self, buffer_id):
-        # Get a buffer page based on buffer_id
-        if buffer_id in self.pool:
-            return self.pool[buffer_id]
-
-        path = self.bufferid_path_csv(buffer_id)
-        # Create a new page if it doesn't exist
-        if not path.is_file():
-            page = Page()
-            self.addPages(buffer_id, page)
-            return page
-        # Return the existing page if it's already in the pool
-        else:
-            if not self.bufferPageChecker(buffer_id):
-                self.pool[buffer_id] = self.read_page(path)
-            self.LRU.put(buffer_id, datetime.timestamp(datetime.now()))
-            return self.pool[buffer_id]
-
-
     # def read_page(self, path):
 
     # def write_page(self, page, buffer_id):
