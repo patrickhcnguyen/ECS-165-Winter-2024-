@@ -36,7 +36,7 @@ class Query:
         base_page.data[record_number * 64 + (4 * 8):record_number * 64 + (5 * 8)] = deletion_marker  # Assuming 4 system columns
 
         # Update indices to reflect deletion! All functions will no longer consider this record, as it will be impossible to locate
-        self.table.index.lazy_delete_index(self.table.key, primary_key, rid)
+        self.table.index.remove_index(self.table.key, primary_key, rid)
 
         return True
 
