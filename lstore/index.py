@@ -1,65 +1,43 @@
-from BTrees._OOBTree import OOBTree
-"""
-A data strucutre holding indices for various columns of a table. Key column should be indexd by default, other columns can be indexed through this object. Indices are usually B-Trees, but other data structures can be used as well.
-"""
-RID_COLUMN = 1
-# BTREE_DEGREE = 5 #the number of values stored in one b-tree node <-- can experiment with different values later
 class Index:
-
     def __init__(self, table):
-        self.indices = [None] *  (table.num_columns+4) # Indices store the b-tree for each column that stores all the indexes for that specific column
-        # self.indices[RID_COLUMN] = BTree(BTREE_DEGREE) # Initializes indexes for key column
-        self.table = table
+        self.indices = [{}, None] * (table.num_columns + 4)  # Initialize indices for each column
+        self.table = table  # Reference to the table
 
-    """
-    # returns the location of all records with the given value on column "column"
-    """
     def locate(self, column, value):
-        # rid_value = self.indices[column].search(value) #finds
-        rid_value = self.indices[column].values(value,value) 
-        return list(rid_value) # return the RID of value
-    
-    """
-    # Returns the RIDs of all records with values in column "column" between "begin" and "end"
-    """
+        # Return RIDs for records matching value in column
+        return list(self.indices[column].get(value, []))
+
     def locate_range(self, column, begin, end):
-        rid_list = self.indices[column].values(begin, end)
-        return list(rid_list) #returns list of RID's of all values that fall within the range
+        # Return RIDs for records within range [begin, end] in column
+        return [rid for key, rids in self.indices[column].items() if begin <= key <= end for rid in rids]
 
-    """
-    # Adds index to a column (should be called when a new row/record is inserted)
-    """
     def add_index(self, column, key, rid):
-        b_tree = self.indices[column]
-        b_tree.insert(key, rid)
+        # Add index entry for a column
+        if key not in self.indices[column]:
+            self.indices[column][key] = set()
+        self.indices[column][key].add(rid)
 
-    """
-    # Updates RID of key from old_rid to new_rid
-    """
     def update_index(self, column, key, old_rid, new_rid):
-        b_tree = self.indices[column]
-        b_tree[key] = new_rid
+        # Update index from old_rid to new_rid for a key in a column
+        if key in self.indices[column]:
+            self.indices[column][key].discard(old_rid)
+            self.indices[column][key].add(new_rid)
 
-    """
-    # Lazy deletes index of key and RID
-    """
-    def lazy_delete_index(self, column, key, rid):
-        # b_tree = self.indices[column]
-        # b_tree.lazy_delete(key, rid)
-        pass
-        
-    """
-    # optional: Create index on specific column
-    """
+    def delete_index(self, column, key, rid):
+        # Delete an index entry for a key and rid in a column
+        if key in self.indices[column]:
+            self.indices[column][key].discard(rid)
+            if not self.indices[column][key]:  # If set is empty after deletion
+                del self.indices[column][key]
+
     def create_index(self, column_number):
-        # self.indices[column_number] = BTree(BTREE_DEGREE)
-        self.indices[column_number] = OOBTree([])
+        # Create an index for a specific column
+        self.indices[column_number] = {}
 
-    """
-    # optional: Drop index of specific column
-    """
     def drop_index(self, column_number):
+        # Drop an index for a specific column
         self.indices[column_number] = None
+
 
 """
 # B-Tree data structure that supports duplicate RID's for one key (can be used in milestone 2 after more testing)
