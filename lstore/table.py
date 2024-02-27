@@ -1,7 +1,9 @@
 from lstore.index import Index
 from lstore.page import Page
+from lstore.Bufferpool import BufferPool
 from time import time
 import struct
+import os
 
 
 #last 4 columns of all records are listed below:
@@ -25,10 +27,29 @@ class Table:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-    def __init__(self, name, num_columns, key):
+    def __init__(self, name, num_columns, key, path='none', bufferpool='none'):
         self.name = name
         self.key = key+4
         self.num_columns = num_columns #excludes the 4 columns written above
+
+        #organize folders related to this table
+        self.path = path
+        if path == 'none':
+            self.path = "./"+name
+            os.mkdir(self.path)
+        directory = "base_pages"
+        self.base_path = os.path.join(self.path, directory)
+        if not os.path.exists(self.base_path):
+            os.makedirs(self.base_path) 
+        directory = "tail_pages"
+        self.tail_path = os.path.join(self.path, directory)
+        if not os.path.exists(self.tail_path):
+            os.makedirs(self.tail_path)
+
+        self.bufferpool = bufferpool
+        if bufferpool == 'none':
+            self.bufferpool = BufferPool()
+        self.bufferpool.add_table(self.name, self)
 
         self.page_directory = {}
         self.tail_page_directory = {}
@@ -43,38 +64,27 @@ class Table:
         
         self.total_tail_records = 0
         self.tps = 0 # INDEX FIX: Should be an array that represents each column
+
         pass
 
     def init_page_dir(self): #adds one set of physical pages to the page_directory, in case the base pages have filled up or to initialize the page directory
         for i in range(self.num_columns+4):
             self.num_pages += 1
-            self.page_directory[self.num_pages] = Page()
+            page = Page()
+            self.bufferpool.addPages(self.name, page, self.num_pages, True)
         pass
 
     def init_tail_page_dir(self): #adds one set of physical pages to the tail_page_directory, in case the tail pages have filled up or to initialize the tail page directory
         for i in range(self.num_columns+5):
             self.num_tail_pages += 1
-            self.tail_page_directory[self.num_tail_pages] = Page()
+            page = Page()
+            self.bufferpool.addPages(self.name, page, self.num_tail_pages, False)
         pass
     
-    def __merge(self): # CHANGE BACK TO __merge
-        # add baseRID column to tail pages (not in this function but in page directory)
-        # get all the tail pages in an array
-        # initialize
-            # an empty basePageCopies dictionary, key: page number, value: base page
-            # updatedQueue list to store RIDs we've checked to
-        # for loop that goes from latest to earliest tail page
-            # check if RID has been updated, if it is, skip tail record
-            # if RID is not updated 
-                # check if page number of RID is in basePageCopies
-                    #retrieve if it is and get it from pageDirectory if not and insert into basePageCopies
-                # get the base page record and switch out values from the tail page as necessary
-            # insert it back into the updated basePageCopies
-        # insert all of the base page copies back into page directory
-        # fix the metadata columns somehow somewhere in the code (in place update) ....
-        # iterate through all of the tail pages
-        # set tps = latest tail record of the current merge cycle
+    
 
+
+    def __merge(self):
         #print("merge is happening...")
         tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         base_page_copies = {}
@@ -118,13 +128,13 @@ class Table:
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
-        max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
+        max_records = 64 #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            self.__merge()
+        #if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+        #    self.__merge()
 
         self.total_tail_records += 1
-        latest_tail_page = self.tail_page_directory[self.num_tail_pages]
+        latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
             self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
         pages_start = (self.num_tail_pages+1) - (self.num_columns+5)
@@ -132,51 +142,50 @@ class Table:
         # write the first 4 columns of the tail record: indirection column, rid, schema_encoding, and time_stamp
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
-        prev_version_rid = self.page_directory[page_set*(self.num_columns+4)].read_val(key_rid)
-        index_within_page = self.tail_page_directory[pages_start].write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
+        prev_version_rid = self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).read_val(key_rid)
+        index_within_page = self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
         tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
-        self.tail_page_directory[1+pages_start].write(tail_rid) #Writing to the tail's rid column
-        self.tail_page_directory[2+pages_start].write(0)
-        self.tail_page_directory[3+pages_start].write(0)
+        self.bufferpool.get_page(self.name, 1+pages_start, False).write(tail_rid) #Writing to the tail's rid column
+        self.bufferpool.get_page(self.name, 2+pages_start, False).write(0)
+        self.bufferpool.get_page(self.name, 3+pages_start, False).write(0)
         
         # write the actual data columns of the tail record
         if (prev_version_rid == -1): # reference the base record during the update
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
-                    value = self.page_directory[i+4+page_set*(self.num_columns+4)].read_val(key_rid)
-                self.tail_page_directory[i+4+pages_start].write(value)
+                    value = self.bufferpool.get_page(self.name, i+4+page_set*(self.num_columns+4), True).read_val(key_rid)
+                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
             prev_trid_in_page = prev_version_rid % max_records
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
-                    value = self.tail_page_directory[i+4+prev_tpage_set*(self.num_columns+5)].read_val(prev_version_rid)
-                self.tail_page_directory[i+4+pages_start].write(value)
-        self.tail_page_directory[self.num_columns+4+pages_start].write(key_rid)
-
+                    value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
+                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
+        self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid)
         #update indirection column of base record
-        self.page_directory[page_set*(self.num_columns+4)].overwrite(key_rid, tail_rid)
+        self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
-        self.page_directory[page_set*(self.num_columns+4)].read_val(1)
+        self.bufferpool.get_page(self.name, 3+page_set*(self.num_columns+4), True).overwrite(key_rid, 1)
         return
 
 
     def insert_record(self, *columns):
         schema_encoding = '0' * self.num_columns
 
-        latest_page = self.page_directory[self.num_pages]
+        latest_page = self.bufferpool.get_page(self.name, self.num_pages, True)
         if latest_page.has_capacity() <= 0: #if there's no capacity
             self.init_page_dir() #add one base page (a set of physical pages, one for each column)
         
         pages_start = (self.num_pages+1) - (self.num_columns+4)
         for i in range(self.num_columns):
-            self.page_directory[i+4+pages_start].write(columns[i])
-        self.page_directory[pages_start].write(-1) #indirection_column = -1 means no tail record exists
-        self.page_directory[pages_start+1].write(self.rid) #rid column
-        self.page_directory[pages_start+2].write(0) #time_stamp column
-        self.page_directory[pages_start+3].write(0) #schema_encoding column
+            self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i])
+        self.bufferpool.get_page(self.name, pages_start, True).write(-1) #indirection_column = -1 means no tail record exists
+        self.bufferpool.get_page(self.name, pages_start+1, True).write(self.rid) #rid column
+        self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
+        self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
         self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
         self.rid += 1
 
@@ -189,20 +198,20 @@ class Table:
         # create a record with the info and return it
 
         key_rid = (self.index.locate(self.key, search_key))[0]
-        max_records = self.page_directory[0].max_records #64 records
+        max_records = 64 #64 records
         base_page_index = (key_rid // max_records)*(self.num_columns+4)
-        indirection = self.page_directory[base_page_index].read_val(key_rid) # other version: change to only base_page_index
+        indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
         columns = []
         if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
-                    data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
+                    data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
                     columns.append(data)
         else: # has been updated, get tail page (return record in tail page)
             tail_page_index = (indirection // max_records)*(self.num_columns+5)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
-                    data = self.tail_page_directory[tail_page_index + i + 4].read_val(indirection)
+                    data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                     columns.append(data)
 
         new_record = Record(key_rid, search_key, columns)
@@ -214,13 +223,13 @@ class Table:
         key_rid = (self.index.locate(self.key, search_key))[0]
         max_records = self.page_directory[0].max_records #64 records
         base_page_index = (key_rid // max_records)*(self.num_columns+4)
-        indirection = self.page_directory[base_page_index].read_val(key_rid) # other version: change to only base_page_index
+        indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
 
         columns = []
         if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
             for i in range(len(projected_columns_index)):
                 if projected_columns_index[i] == 1:
-                    data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
+                    data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
                     columns.append(data)
         else: # has been updated, get tail page (return record in tail page with correct version)
             tail_page_index = (indirection // max_records)*(self.num_columns+5)
@@ -228,19 +237,19 @@ class Table:
             has_past = True # if there is more versions before the current tail record
             while(counter > 0 and has_past): # keep going back until it reaches the desired version
                 tail_page_index = (indirection // max_records)*(self.num_columns+5)
-                indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
+                indirection = self.bufferpool.get_page(self.name, tail_page_index, False).read_val(indirection)
                 counter -= 1
                 if indirection == -1 or indirection < self.tps:
                     has_past = False
             if has_past:
                 for i in range(len(projected_columns_index)):
                     if projected_columns_index[i] == 1:
-                        data = self.tail_page_directory[tail_page_index + i + 4].read_val(indirection)
+                        data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                         columns.append(data)
             else: # if it's asking for versions that doesn't exist, return base page
                 for i in range(len(projected_columns_index)):
                     if projected_columns_index[i] == 1:
-                        data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
+                        data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
                         columns.append(data)
 
         new_record = Record(key_rid, search_key, columns)

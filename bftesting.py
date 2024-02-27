@@ -17,10 +17,6 @@ q.insert(*record2)
 q.insert(*record3)
 q.insert(*record4)
 q.insert(*record5)
-for i in range(5):
-    print(grades_table.page_directory[4].read_val(i), " ", grades_table.page_directory[5].read_val(i), " ", grades_table.page_directory[6].read_val(i), " ", grades_table.page_directory[7].read_val(i), " ", grades_table.page_directory[8].read_val(i))
-
-
 
 print("\nwriting to tail page- ")
 record1 = [45, 22, 33, 44, 7]
@@ -41,13 +37,15 @@ q.update(45, *update1)
 q.update(45, *update2)
 q.update(45, *update3)
 q.update(45, *update4)
-for i in range(64*2):
-    q.update(45, *update4)
-update5 = [None, None, 1, 2, 0]
-for i in range(64*2): #64-6 = 58
-    q.update(1, *update5)
-q.update(45, *update2)
 
-print("\nchecking base page for merge- ")
-for i in range(5):
-    print(grades_table.page_directory[4].read_val(i), " ", grades_table.page_directory[5].read_val(i), " ", grades_table.page_directory[6].read_val(i), " ", grades_table.page_directory[7].read_val(i), " ", grades_table.page_directory[8].read_val(i))
+r= q.select(45, 0, [1, 1, 1, 1, 1])[0].columns
+print(r)
+r= q.select(47, 0, [1, 1, 1, 1, 1])[0].columns
+print(r)
+r= q.select(52, 0, [1, 1, 1, 1, 1])[0].columns
+print(r)
+r= q.select(8, 0, [1, 1, 1, 1, 1])[0].columns
+print(r)
+r= q.select(1, 0, [1, 1, 1, 1, 1])[0].columns
+print(r)
+#print(grades_table.page_directory)
