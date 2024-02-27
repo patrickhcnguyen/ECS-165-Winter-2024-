@@ -81,16 +81,16 @@ class Table:
         updatedQueue = set()
         max_records = 64
 
-        for i in reversed(range(self.total_tail_records - self.tps)):
+        for i in reversed(range(self.total_tail_records - self.tps)): #ex. if there are 40 tail records (latest rid=39) and tps at rid=27 (tail-record with rid=27 and beyond still need to be merged), then creates a range from 12 to 0
             tail_rid = i + self.tps
-            tail_page_index = (tail_rid // max_records)*(self.num_columns + 5)
+            tail_page_index = (tail_rid // max_records)*(self.num_columns + 5) #tail page now has a 5th column, base-rid
 
             base_rid = tail_records[tail_page_index + 4 + self.num_columns].read_val(tail_rid)
             base_page_index = (base_rid // max_records)*(self.num_columns + 4)
 
-            print("base id", base_rid)
+            #print("base id", base_rid)
             if base_rid not in updatedQueue: # skips merge if base page rid is already in updated_queue
-                print("merged")
+                #print("merged")
                 for i in range(self.num_columns): # replaces values of base record with latest tail record
                     value = tail_records[tail_page_index + 4 + i].read_val(tail_rid)
                     base_page = None
@@ -111,17 +111,19 @@ class Table:
             updatedQueue.add(base_rid)
 
         for page_num in base_page_copies:
-            self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk
+            self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
 
         self.tps = self.total_tail_records
 
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
-        self.total_tail_records += 1
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.page_directory[0].max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        
+        if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            self.merge()
+
+        self.total_tail_records += 1
         latest_tail_page = self.tail_page_directory[self.num_tail_pages]
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
             self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
@@ -133,7 +135,6 @@ class Table:
         prev_version_rid = self.page_directory[page_set*(self.num_columns+4)].read_val(key_rid)
         index_within_page = self.tail_page_directory[pages_start].write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
         tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
-
         self.tail_page_directory[1+pages_start].write(tail_rid) #Writing to the tail's rid column
         self.tail_page_directory[2+pages_start].write(0)
         self.tail_page_directory[3+pages_start].write(0)
@@ -151,7 +152,7 @@ class Table:
             for i in range(self.num_columns):
                 value = record[i]
                 if (value == None):
-                    value = self.tail_page_directory[i+4+prev_tpage_set*(self.num_columns+4)].read_val(prev_version_rid)
+                    value = self.tail_page_directory[i+4+prev_tpage_set*(self.num_columns+5)].read_val(prev_version_rid)
                 self.tail_page_directory[i+4+pages_start].write(value)
         self.tail_page_directory[self.num_columns+4+pages_start].write(key_rid)
 
@@ -222,11 +223,11 @@ class Table:
                     data = self.page_directory[base_page_index + i + 4].read_val(key_rid)
                     columns.append(data)
         else: # has been updated, get tail page (return record in tail page with correct version)
-            tail_page_index = (indirection // max_records)*(self.num_columns+4)
+            tail_page_index = (indirection // max_records)*(self.num_columns+5)
             counter = -version_num # how many times we have to go back
             has_past = True # if there is more versions before the current tail record
             while(counter > 0 and has_past): # keep going back until it reaches the desired version
-                tail_page_index = (indirection // max_records)*(self.num_columns+4)
+                tail_page_index = (indirection // max_records)*(self.num_columns+5)
                 indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
                 counter -= 1
                 if indirection == -1 or indirection < self.tps:
