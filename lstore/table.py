@@ -336,29 +336,12 @@ class Table:
     def open(self):
         filename = "tabledata.pickle"
         path = os.path.join(self.path, filename)
-        table = Table(self.name, self.num_columns, self.key, self.path, self.bufferpool)
         with open(path, 'rb') as f:
-            table = pickle.load(f)
-        index = table.index
-        page_dir = table.page_directory
-        self.index = index
-        self.page_directory = page_dir
+            loaded_table = pickle.load(f)
 
-        #self.index.indices = self.index.indices
-        #print(self.num_tail_pages)
-        #print(self.index.indices)
+        # directly update the current instance's attributes
+        self.__dict__.update(loaded_table.__dict__)
+
+        # Re-bind bufferpool's reference to this table
+        self.bufferpool.add_table(self.name, self)
         
-        tail_dir = table.tail_page_directory
-        num_pages = table.num_pages
-        num_tpages = table.num_tail_pages
-        self.tail_page_directory = tail_dir
-        self.num_pages = num_pages #stores the amount of pages minus 1
-        self.num_tail_pages = num_tpages #stores the amount of pages minus 1
-
-        rid_count = table.rid
-        self.rid = rid_count  #rid of the next spot in the page range (not of the latest record)
-        total_tail_records = table.total_tail_records
-        self.total_tail_records = total_tail_records
-        tps = table.tps
-        self.tps = tps
-        return
