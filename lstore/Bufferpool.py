@@ -107,6 +107,7 @@ class BufferPool:
             path = table.page_directory[page_key]
             f = open(path, 'w').close() #erases the current contents of the file
             f = open(path, 'w')
+            f.write(str(page.tps)+"\n")
             for i in range(page.num_records):
                 data = page.read_val(i)
                 f.write(str(data)+"\n")
