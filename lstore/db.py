@@ -1,13 +1,14 @@
 from lstore.table import Table
 from lstore.Bufferpool import BufferPool
 import os
+import pickle
 
 class Database():
 
     def __init__(self):
         self.path = ''
-        self.tables = []
-        self.table_paths = []
+        self.tables = {}
+        self.table_paths = {}
         self.bufferpool = BufferPool()
         pass
 
@@ -16,11 +17,17 @@ class Database():
         self.path = path
         if not os.path.exists(self.path):
             os.makedirs(self.path)
-        #self.bufferpool.open(path)
-        pass
+            self.bufferpool.parent_path = self.path
+            return
+        self.bufferpool.parent_path = self.path
+        self.bufferpool.open()
+        return
+
 
     def close(self):
-        #self.bufferpool.close()
+        self.bufferpool.close()
+        for key in self.tables.keys():
+            self.tables[key].close()
         self.tables.clear()
         pass
 
@@ -36,8 +43,9 @@ class Database():
         path = os.path.join(parent_dir, directory)
         if not os.path.exists(path):
             os.makedirs(path)
-        self.table_paths.append(path)
+        self.table_paths[name] = path
         table = Table(name, num_columns, key_index, path, self.bufferpool)
+        self.tables[name] = table
         return table
 
     
@@ -52,4 +60,4 @@ class Database():
     # Returns table with the passed name
     """
     def get_table(self, name):
-        pass
+        return self.tables[name]

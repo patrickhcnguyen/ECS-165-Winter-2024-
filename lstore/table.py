@@ -4,6 +4,7 @@ from lstore.Bufferpool import BufferPool
 from time import time
 import struct
 import os
+import pickle
 
 
 #last 4 columns of all records are listed below:
@@ -323,3 +324,14 @@ class Table:
         
         return total_sum
 
+    def close(self):
+        filename = "tabledata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'wb') as f:
+            pickle.dump(self, f) #dump all metadata, pagedirectory, and index 
+    
+    def open(self):
+        filename = "tabledata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'rb') as f:
+            self = pickle.load(f)
