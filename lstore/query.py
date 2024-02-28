@@ -47,7 +47,7 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
             self.table.insert_record(*columns)  # if primary key not found
-        
+
     """
     # Read matching record with specified search key
     # :param search_key: the value you want to search based on
@@ -85,7 +85,6 @@ class Query:
             return False  # if primary key not found
         self.table.update_record(primary_key, *columns)
         return True
-
 
 
 
