@@ -7,7 +7,7 @@ import pickle
 
 #Can be accessed from table class and vice versa
 class BufferPool:
-    def __init__(self, path='none', capacity=100):
+    def __init__(self, path='none', capacity=1000):
         self.parent_path = path          # path where metadata can be saved.
         #self.LRU = LRU()         
         self.capacity = capacity  

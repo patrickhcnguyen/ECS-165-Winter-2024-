@@ -47,7 +47,8 @@ for key in keys:
 print("Select finished")
 
 # x update on every column
-for _ in range(number_of_updates):
+for k in range(number_of_updates):
+    print(k)
     for key in keys:
         updated_columns = [None, None, None, None, None]
         for i in range(2, grades_table.num_columns):
