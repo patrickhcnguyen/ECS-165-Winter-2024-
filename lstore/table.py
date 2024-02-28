@@ -84,18 +84,18 @@ class Table:
     
     
 
-    def merge(self): #FIX: change to __merge after testing for bufferpool
+    def __merge(self): #FIX: change to __merge after testing for bufferpool
         #print("merge is happening...")
         # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         tail_records = self.bufferpool.get_tail_pages(self.name)
         base_page_copies = {}
         updatedQueue = set()
         max_records = self.max_records
-
+        for key in tail_records.keys():
+            print(key)
         for i in reversed(range(self.total_tail_records - self.tps)): #ex. if there are 40 tail records (latest rid=39) and tps at rid=27 (tail-record with rid=27 and beyond still need to be merged), then creates a range from 12 to 0
             tail_rid = i + self.tps
             tail_page_index = (tail_rid // max_records)*(self.num_columns + 5) #tail page now has a 5th column, base-rid
-
             base_rid = tail_records[tail_page_index + 4 + self.num_columns].read_val(tail_rid)
             base_page_index = (base_rid // max_records)*(self.num_columns + 4)
 
@@ -167,11 +167,11 @@ class Table:
                 value = record[i]
                 if (value == None):
                     value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
-                    print("get val from indirection: ", value)
+                    #print("get val from indirection: ", value)
                 page0 = self.bufferpool.get_page(self.name, pages_start, False)
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
                 num_records=page0.num_records
-                print("p", page0.read_val(num_records-1))
+                #print("p", page0.read_val(num_records-1))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)

@@ -39,10 +39,16 @@ print(r)
 print("\n CHECK HERE ")
 q.update(45, *update2)
 r= q.select_version(45, 0, [1, 1, 1, 1, 1], 0)[0].columns
-print(grades_table.tail_page_directory[4])
+#print(grades_table.tail_page_directory[4])
 print(r)
 q.update(45, *update3)
 q.update(45, *update4)
+for i in range(64*2):
+    q.update(45, *update4)
+update5 = [None, None, 1, 2, 0]
+for i in range(64*2): #64-6 = 58
+    q.update(1, *update5)
+q.update(45, *update2)
 
 
 r= q.select_version(45, 0, [1, 1, 1, 1, 1], 0)[0].columns
@@ -57,6 +63,5 @@ r= q.select(1, 0, [1, 1, 1, 1, 1])[0].columns
 print(r)
 #print(grades_table.page_directory)
 
-for stuff in grades_table.page_directory: # just to see where the base pages are
-    print(grades_table.page_directory[stuff])
-grades_table.merge()
+#for stuff in grades_table.page_directory: # just to see where the base pages are
+#    print(grades_table.page_directory[stuff])

@@ -6,7 +6,7 @@ from pathlib import Path
 
 #Can be accessed from table class and vice versa
 class BufferPool:
-    def __init__(self, capacity=50):
+    def __init__(self, capacity=100):
         self.path = ""          # Path where buffer pages are stored.
         self.LRU = LRU()         
         self.capacity = capacity  
@@ -15,7 +15,7 @@ class BufferPool:
         self.table_access = {}
 
     def add_table(self, name, table):
-        print("Access to table ", name, " granted to bf")
+        #print("Access to table ", name, " granted to bf")
         self.table_access[name] = table
 
     def initialPath(self, path):
@@ -91,16 +91,8 @@ class BufferPool:
     def get_tail_pages(self, table_name):
         tail_pages = {}
         table = self.table_access[table_name]
-        for page_key in range(table.num_tail_pages):
-            path = table.tail_page_directory[page_key]
-            f = open(path, "r")
-            page = Page()
-            self.capacity -= 1
-            lines = f.readlines()
-            page.tps = int(lines[0])
-            for i in range(len(lines)-1):
-                page.write(int(lines[i+1]))
-            tail_pages[page_key] = page
+        for page_key in range(table.num_tail_pages+1):
+            tail_pages[page_key] = self.get_page(table_name, page_key, is_base=False)
         return tail_pages
 
     def replace_page(self, table_name, page_key, page):
