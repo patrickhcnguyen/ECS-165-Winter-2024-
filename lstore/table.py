@@ -29,7 +29,7 @@ class Table:
     """
     def __init__(self, name, num_columns, key, path='none', bufferpool='none'):
         self.name = name
-        self.key = key+4
+        self.key = key
         self.num_columns = num_columns #excludes the 4 columns written above
         self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
 
@@ -60,7 +60,8 @@ class Table:
         self.init_tail_page_dir()
 
         self.index = Index(self)
-        self.index.create_index(self.key)
+        for i in range(self.num_columns):
+            self.index.create_index(i)
         self.rid = 0  #rid of the next spot in the page range (not of the latest record)
         
         self.total_tail_records = 0
@@ -135,6 +136,9 @@ class Table:
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
+        for i in range(len(record)):
+            self.index.delete_index(i, record[i], key_rid)
+            self.index.add_index(i, record[i], key_rid)
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
@@ -197,7 +201,9 @@ class Table:
         self.bufferpool.get_page(self.name, pages_start+1, True).write(self.rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
-        self.index.add_index(self.key, columns[self.key-4], self.rid) # add index
+        self.index.add_index(self.key, columns[self.key], self.rid) # add index
+        for i in range(self.num_columns):
+            self.index.add_index(i, columns[i], self.rid)
         self.rid += 1
 
     def select_record(self, search_key, search_column, projected_columns_index):
@@ -207,65 +213,64 @@ class Table:
         # if it has been updated, go to tail page and find the record
         # if it has not been updated, retrieve the projected_columns 
         # create a record with the info and return it
-
-        key_rid = (self.index.locate(self.key, search_key))[0]
-        max_records = self.max_records #64 records
-        base_page_index = (key_rid // max_records)*(self.num_columns+4)
-        indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
-        columns = []
-        if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
-            for i in range(len(projected_columns_index)):
-                if projected_columns_index[i] == 1:
-                    data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
-                    columns.append(data)
-        else: # has been updated, get tail page (return record in tail page)
-            tail_page_index = (indirection // max_records)*(self.num_columns+5)
-            for i in range(len(projected_columns_index)):
-                if projected_columns_index[i] == 1:
-                    data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
-                    columns.append(data)
-
-        new_record = Record(key_rid, search_key, columns)
         record_list = []
-        record_list.append(new_record)
-        return record_list
-    
-    def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
-        key_rid = (self.index.locate(self.key, search_key))[0]
-        max_records = self.max_records #64 records
-        base_page_index = (key_rid // max_records)*(self.num_columns+4)
-        indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key_rid) # other version: change to only base_page_index
-
-        columns = []
-        if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
-            for i in range(len(projected_columns_index)):
-                if projected_columns_index[i] == 1:
-                    data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
-                    columns.append(data)
-        else: # has been updated, get tail page (return record in tail page with correct version)
-            tail_page_index = (indirection // max_records)*(self.num_columns+5)
-            counter = -version_num # how many times we have to go back
-            has_past = True # if there is more versions before the current tail record
-            while(counter > 0 and has_past): # keep going back until it reaches the desired version
+        key_rid = self.index.locate(search_column, search_key)
+        for key in key_rid:
+            max_records = self.max_records #64 records
+            base_page_index = (key // max_records)*(self.num_columns+4)
+            indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key) # other version: change to only base_page_index
+            columns = []
+            if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
+                for i in range(len(projected_columns_index)):
+                    if projected_columns_index[i] == 1:
+                        data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key)
+                        columns.append(data)
+            else: # has been updated, get tail page (return record in tail page)
                 tail_page_index = (indirection // max_records)*(self.num_columns+5)
-                indirection = self.bufferpool.get_page(self.name, tail_page_index, False).read_val(indirection)
-                counter -= 1
-                if indirection == -1 or indirection < self.tps:
-                    has_past = False
-            if has_past:
                 for i in range(len(projected_columns_index)):
                     if projected_columns_index[i] == 1:
                         data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                         columns.append(data)
-            else: # if it's asking for versions that doesn't exist, return base page
+            new_record = Record(key, search_key, columns)
+            record_list.append(new_record)
+        return record_list
+    
+    def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
+        record_list = []
+        key_rid = self.index.locate(search_column, search_key)
+        for key in key_rid:
+            max_records = self.max_records #64 records
+            base_page_index = (key // max_records)*(self.num_columns+4)
+            indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key) # other version: change to only base_page_index
+
+            columns = []
+            if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
                 for i in range(len(projected_columns_index)):
                     if projected_columns_index[i] == 1:
-                        data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key_rid)
+                        data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key)
                         columns.append(data)
-
-        new_record = Record(key_rid, search_key, columns)
-        record_list = []
-        record_list.append(new_record)
+            else: # has been updated, get tail page (return record in tail page with correct version)
+                tail_page_index = (indirection // max_records)*(self.num_columns+5)
+                counter = -version_num # how many times we have to go back
+                has_past = True # if there is more versions before the current tail record
+                while(counter > 0 and has_past): # keep going back until it reaches the desired version
+                    tail_page_index = (indirection // max_records)*(self.num_columns+5)
+                    indirection = self.bufferpool.get_page(self.name, tail_page_index, False).read_val(indirection)
+                    counter -= 1
+                    if indirection == -1 or indirection < self.tps:
+                        has_past = False
+                if has_past:
+                    for i in range(len(projected_columns_index)):
+                        if projected_columns_index[i] == 1:
+                            data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
+                            columns.append(data)
+                else: # if it's asking for versions that doesn't exist, return base page
+                    for i in range(len(projected_columns_index)):
+                        if projected_columns_index[i] == 1:
+                            data = self.bufferpool.get_page(self.name, base_page_index+i+4, True).read_val(key)
+                            columns.append(data)
+            new_record = Record(key, search_key, columns)
+            record_list.append(new_record)
         return record_list
 
     

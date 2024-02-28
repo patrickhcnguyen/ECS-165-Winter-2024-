@@ -52,10 +52,6 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
             self.table.insert_record(*columns)  # if primary key not found
-        # Update index for all columns
-        for i, value in enumerate(columns):
-            if self.table.index.indices[i] is not None:  # Check if index exists for column
-                self.table.index.add_index(i, value, rid)
     
     """
     # Read matching record with specified search key
@@ -90,25 +86,12 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
 
-def update(self, primary_key, *columns):
-    # Locate the record by primary key
-    rids = self.table.index.locate(self.table.key, primary_key)
-    if not rids:
-        return  # Record not found, so return early
-
-    # Assuming only one record can have the given primary key
-    rid = rids[0]
-    old_record = self.table.get_record(rid)  # You need to implement get_record method
-
-    # Update the record in the table
-    updated_record = self.table.update_record(rid, *columns)  # You need to implement update_record method
-
-    # Update index for all columns
-    for i, (old_value, new_value) in enumerate(zip(old_record, updated_record)):
-        if self.table.index.indices[i] is not None:  # Check if index exists for column
-            if old_value != new_value:  # Only update index if the value has changed
-                self.table.index.delete_index(i, old_value, rid)
-                self.table.index.add_index(i, new_value, rid)
+    def update(self, primary_key, *columns):
+        rid = self.table.index.locate(self.table.key, primary_key)
+        if rid is None:
+            return False  # if primary key not found
+        self.table.update_record(primary_key, *columns)
+        return True
 
 
 
