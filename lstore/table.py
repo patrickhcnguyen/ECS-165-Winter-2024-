@@ -238,7 +238,7 @@ class Table:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
             indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key) # other version: change to only base_page_index
-            print(indirection)
+            # print(indirection)
             columns = []
             if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
                 for i in range(len(projected_columns_index)):
