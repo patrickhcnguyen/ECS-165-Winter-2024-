@@ -25,6 +25,8 @@ class Database():
         path = os.path.join(self.path, filename)
         with open(path, 'rb') as f:
             self.table_columns = pickle.load(f)
+        self.bufferpool.parent_path = self.path
+        self.bufferpool.open()
 
         for file in os.listdir(self.path):
             if file!="bufferpool.pickle" and file!="dbdata.pickle":
@@ -34,8 +36,7 @@ class Database():
                 table.open()
                 self.tables[file] = table
                 self.table_paths[file] = path
-        self.bufferpool.parent_path = self.path
-        self.bufferpool.open()
+                self.bufferpool.add_table(file, table)
         return
 
 

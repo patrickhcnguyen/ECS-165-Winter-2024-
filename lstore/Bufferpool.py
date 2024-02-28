@@ -179,9 +179,7 @@ class BufferPool:
         path = os.path.join(self.parent_path, filename)
         bp = BufferPool(self.parent_path)
         with open(path, 'rb') as f:
-            bp = pickle.load(f)
-        table_access = bp.table_access  
-        self.table_access = table_access    
+            bp = pickle.load(f)   
         capacity = bp.capacity
         self.capacity = capacity  
         disk_page_count = bp.disk_page_count

@@ -234,12 +234,11 @@ class Table:
     def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
         record_list = []
         key_rid = self.index.locate(search_column, search_key)
-        #print(self.page_directory[9])
         for key in key_rid:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
             indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key) # other version: change to only base_page_index
-
+            print(indirection)
             columns = []
             if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
                 for i in range(len(projected_columns_index)):
@@ -269,6 +268,9 @@ class Table:
             new_record = Record(key, search_key, columns)
             record_list.append(new_record)
             #print(new_record.columns)
+            key = self.index.locate(0, 92106477)[0]
+            base_page_index = (key // max_records)*(self.num_columns+4)     
+            #print(self.page_directory[base_page_index])       
         return record_list
 
     
@@ -300,7 +302,6 @@ class Table:
         rid_list = self.index.locate_range(self.key, start, end)
         if len(rid_list) == 0:
             return None
-
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)
             indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(rid)
