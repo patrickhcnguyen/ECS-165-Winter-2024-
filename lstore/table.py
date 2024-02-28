@@ -83,14 +83,13 @@ class Table:
     
     
 
-
-    def __merge(self):
+    def merge(self): #FIX: change to __merge after testing for bufferpool
         #print("merge is happening...")
-        tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
+        # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
+        tail_records = self.bufferpool.get_tail_pages(self.name)
         base_page_copies = {}
         updatedQueue = set()
         max_records = 64
-
         for i in reversed(range(self.total_tail_records - self.tps)): #ex. if there are 40 tail records (latest rid=39) and tps at rid=27 (tail-record with rid=27 and beyond still need to be merged), then creates a range from 12 to 0
             tail_rid = i + self.tps
             tail_page_index = (tail_rid // max_records)*(self.num_columns + 5) #tail page now has a 5th column, base-rid
@@ -107,7 +106,8 @@ class Table:
                     if (base_page_index + 4 + i) in base_page_copies: # if page has been stored, retrieve it from memory
                         base_page = base_page_copies[base_page_index + 4 + i]
                     else: # else retrieve it from disk
-                        base_page = self.page_directory[base_page_index + 4 + i].copy() #BUFFERPOOL FIX: obtain copy from disk 
+                        # base_page = self.page_directory[base_page_index + 4 + i].copy() #BUFFERPOOL FIX: obtain copy from disk 
+                        base_page = self.bufferpool.get_page(self.name, base_page_index + 4 + i).copy()
                         base_page_copies[base_page_index + 4 + i] = base_page
                     base_page.overwrite(base_rid, value)
 
@@ -115,13 +115,15 @@ class Table:
                 if (base_page_index + 3) in base_page_copies: # if page has been stored, retrieve it from memory
                     base_page_copies[base_page_index + 3].overwrite(base_rid, 0)
                 else: # else retrieve it from disk
-                    base_page = self.page_directory[base_page_index + 3].copy() #BUFFERPOOL FIX: obtain copy from disk 
+                    base_page = self.bufferpool.get_page(self.name, base_page_index + 3).copy()
+                    # base_page = self.page_directory[base_page_index + 3].copy() #BUFFERPOOL FIX: obtain copy from disk 
                     base_page_copies[base_page_index + 3] = base_page
                     base_page.overwrite(base_rid, 0)
             updatedQueue.add(base_rid)
 
         for page_num in base_page_copies:
-            self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
+            self.bufferpool.replace_page(self.name, page_num, base_page_copies[page_num])
+            # self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
 
         self.tps = self.total_tail_records
 
