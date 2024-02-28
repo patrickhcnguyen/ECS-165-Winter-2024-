@@ -56,3 +56,7 @@ print(r)
 r= q.select(1, 0, [1, 1, 1, 1, 1])[0].columns
 print(r)
 #print(grades_table.page_directory)
+
+for stuff in grades_table.page_directory: # just to see where the base pages are
+    print(grades_table.page_directory[stuff])
+grades_table.merge()
