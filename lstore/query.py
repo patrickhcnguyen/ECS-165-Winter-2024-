@@ -1,9 +1,7 @@
 from lstore.table import Table, Record
 from lstore.index import Index
 import struct
-
 RID_COLUMN = 1
-
 class Query:
     """
     # Creates a Query object that can perform different queries on the specified table 
@@ -14,7 +12,6 @@ class Query:
     def __init__(self, table):
         self.table = table
         pass
-
     
     """
     # internal Method
@@ -26,7 +23,6 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)[0]
         if rid is None:
             return False  # if primary key is not found
-
         # writing special deletion marker like -1 into record's schema encoding column
         max_records = self.table.page_directory[0].max_records #64 records
         page_number = rid // max_records
@@ -34,9 +30,8 @@ class Query:
         base_page = self.table.page_directory[page_number+3]
         deletion_marker = struct.pack('i', -1)
         base_page.data[record_number * 64 + (4 * 8):record_number * 64 + (5 * 8)] = deletion_marker  # Assuming 4 system columns
-
         # Update indices to reflect deletion! All functions will no longer consider this record, as it will be impossible to locate
-        self.table.index.lazy_delete_index(self.table.key, primary_key, rid)
+        self.table.index.remove_index(self.table.key, primary_key, rid)
 
         return True
 
@@ -52,11 +47,7 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
             self.table.insert_record(*columns)  # if primary key not found
-        # Update index for all columns
-        for i, value in enumerate(columns):
-            if self.table.index.indices[i] is not None:  # Check if index exists for column
-                self.table.index.add_index(i, value, rid)
-    
+        
     """
     # Read matching record with specified search key
     # :param search_key: the value you want to search based on
@@ -68,7 +59,6 @@ class Query:
     """
     def select(self, search_key, search_key_index, projected_columns_index):
         return self.table.select_record(search_key, search_key_index, projected_columns_index)
-
     
     """
     # Read matching record with specified search key
@@ -82,7 +72,6 @@ class Query:
     """
     def select_version(self, search_key, search_key_index, projected_columns_index, relative_version):
         return self.table.select_record_version(search_key, search_key_index, projected_columns_index, relative_version)
-
     
     """
     # Update a record with specified key and columns
@@ -90,29 +79,16 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
 
-def update(self, primary_key, *columns):
-    # Locate the record by primary key
-    rids = self.table.index.locate(self.table.key, primary_key)
-    if not rids:
-        return  # Record not found, so return early
-
-    # Assuming only one record can have the given primary key
-    rid = rids[0]
-    old_record = self.table.get_record(rid)  # You need to implement get_record method
-
-    # Update the record in the table
-    updated_record = self.table.update_record(rid, *columns)  # You need to implement update_record method
-
-    # Update index for all columns
-    for i, (old_value, new_value) in enumerate(zip(old_record, updated_record)):
-        if self.table.index.indices[i] is not None:  # Check if index exists for column
-            if old_value != new_value:  # Only update index if the value has changed
-                self.table.index.delete_index(i, old_value, rid)
-                self.table.index.add_index(i, new_value, rid)
+    def update(self, primary_key, *columns):
+        rid = self.table.index.locate(self.table.key, primary_key)
+        if rid is None:
+            return False  # if primary key not found
+        self.table.update_record(primary_key, *columns)
+        return True
 
 
 
-    
+
     """
     :param start_range: int         # Start of the key range to aggregate 
     :param end_range: int           # End of the key range to aggregate 
@@ -121,7 +97,6 @@ def update(self, primary_key, *columns):
     # Returns the summation of the given range upon success
     # Returns False if no record exists in the given range
     """
-
     def sum(self, start_range, end_range, aggregate_column_index):
         result = self.table.sum_records(start_range, end_range, aggregate_column_index)
         if result:
@@ -144,7 +119,6 @@ def update(self, primary_key, *columns):
             return result
         else:
             return False
-
     
     """
     incremenets one column of the record
@@ -162,6 +136,3 @@ def update(self, primary_key, *columns):
             u = self.update(key, *updated_columns)
             return u
         return False
-
-
-

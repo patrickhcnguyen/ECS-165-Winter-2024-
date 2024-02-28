@@ -98,7 +98,6 @@ class BufferPool:
 
     def replace_page(self, table_name, page_key, page):
         table = self.table_access[table_name]
-        print(page_key, " check here")
         for key in self.pool.keys():
             if (self.pool[key][0]==table_name and self.pool[key][2]==page_key and self.pool[key][3]==True):
                 page.is_dirty = 1
@@ -162,7 +161,10 @@ class BufferPool:
     
 
     def close(self):
+        numkeys=0
         for key in self.pool.keys():
+            numkeys+=1
+        for i in range(numkeys):
             self.evict_bufferpool()
         self.pool.clear()
         filename = "bufferpool.pickle"

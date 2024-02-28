@@ -9,6 +9,7 @@ class Database():
         self.path = ''
         self.tables = {}
         self.table_paths = {}
+        self.table_columns = {}
         self.bufferpool = BufferPool()
         pass
 
@@ -19,6 +20,20 @@ class Database():
             os.makedirs(self.path)
             self.bufferpool.parent_path = self.path
             return
+        
+        filename = "dbdata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'rb') as f:
+            self.table_columns = pickle.load(f)
+
+        for file in os.listdir(self.path):
+            if file!="bufferpool.pickle" and file!="dbdata.pickle":
+                num_columns = self.table_columns[file]
+                path = os.path.join(self.path, file)
+                table = Table(file, num_columns, 0, path, self.bufferpool)
+                table.open()
+                self.tables[file] = table
+                self.table_paths[file] = path
         self.bufferpool.parent_path = self.path
         self.bufferpool.open()
         return
@@ -29,6 +44,11 @@ class Database():
         for key in self.tables.keys():
             self.tables[key].close()
         self.tables.clear()
+
+        filename = "dbdata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'wb') as f:
+            pickle.dump(self.table_columns, f) #dump all metadata, pagedirectory, and index 
         pass
 
     """
@@ -46,6 +66,7 @@ class Database():
         self.table_paths[name] = path
         table = Table(name, num_columns, key_index, path, self.bufferpool)
         self.tables[name] = table
+        self.table_columns[name] = num_columns
         return table
 
     
