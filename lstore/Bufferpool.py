@@ -127,6 +127,7 @@ class BufferPool:
             return
         filename = "page"+str(self.disk_page_count)
         path = os.path.join(table.base_path, filename)
+        #print(" writing page ", filename)
         if self.pool[buffer_id][3] == False:
             path = os.path.join(table.tail_path, filename)
         f = open(path, "w")
@@ -166,6 +167,7 @@ class BufferPool:
             numkeys+=1
         for i in range(numkeys):
             self.evict_bufferpool()
+            self.disk_page_count+=1
         self.pool.clear()
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
@@ -175,5 +177,12 @@ class BufferPool:
     def open(self):
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
+        bp = BufferPool(self.parent_path)
         with open(path, 'rb') as f:
-            self = pickle.load(f)
+            bp = pickle.load(f)
+        table_access = bp.table_access  
+        self.table_access = table_access    
+        capacity = bp.capacity
+        self.capacity = capacity  
+        disk_page_count = bp.disk_page_count
+        self.disk_page_count = disk_page_count

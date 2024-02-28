@@ -24,7 +24,7 @@ class Query:
         if rid is None:
             return False  # if primary key is not found
         # writing special deletion marker like -1 into record's schema encoding column
-        max_records = self.table.page_directory[0].max_records #64 records
+        max_records = self.table.max_records #64 records
         page_number = rid // max_records
         record_number = rid % max_records
         base_page = self.table.page_directory[page_number+3]

@@ -227,12 +227,14 @@ class Table:
                         data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                         columns.append(data)
             new_record = Record(key, search_key, columns)
+            print(new_record.columns)
             record_list.append(new_record)
         return record_list
     
     def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
         record_list = []
         key_rid = self.index.locate(search_column, search_key)
+        #print(self.page_directory[9])
         for key in key_rid:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
@@ -266,6 +268,7 @@ class Table:
                             columns.append(data)
             new_record = Record(key, search_key, columns)
             record_list.append(new_record)
+            #print(new_record.columns)
         return record_list
 
     
@@ -339,6 +342,7 @@ class Table:
         page_dir = table.page_directory
         self.index = index
         self.page_directory = page_dir
+
         #self.index.indices = self.index.indices
         #print(self.num_tail_pages)
         #print(self.index.indices)
