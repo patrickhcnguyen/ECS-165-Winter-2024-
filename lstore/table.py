@@ -4,6 +4,7 @@ from lstore.Bufferpool import BufferPool
 from time import time
 import struct
 import os
+import pickle
 
 
 #last 4 columns of all records are listed below:
@@ -92,8 +93,6 @@ class Table:
         base_page_copies = {}
         updatedQueue = set()
         max_records = self.max_records
-        for key in tail_records.keys():
-            print(key)
         for i in reversed(range(self.total_tail_records - self.tps)): #ex. if there are 40 tail records (latest rid=39) and tps at rid=27 (tail-record with rid=27 and beyond still need to be merged), then creates a range from 12 to 0
             tail_rid = i + self.tps
             tail_page_index = (tail_rid // max_records)*(self.num_columns + 5) #tail page now has a 5th column, base-rid
@@ -123,11 +122,7 @@ class Table:
                     base_page_copies[base_page_index + 3] = base_page
                     base_page.overwrite(base_rid, 0)
             updatedQueue.add(base_rid)
-        print(" check page dir ")
-        for key in self.page_directory.keys():
-            print(key)
         for page_num in base_page_copies:
-            print(page_num)
             self.bufferpool.replace_page(self.name, page_num, base_page_copies[page_num])
             # self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
 
@@ -328,3 +323,14 @@ class Table:
         
         return total_sum
 
+    def close(self):
+        filename = "tabledata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'wb') as f:
+            pickle.dump(self, f) #dump all metadata, pagedirectory, and index 
+    
+    def open(self):
+        filename = "tabledata.pickle"
+        path = os.path.join(self.path, filename)
+        with open(path, 'rb') as f:
+            self = pickle.load(f)

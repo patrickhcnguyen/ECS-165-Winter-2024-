@@ -3,12 +3,13 @@ from lstore.lru import LRU
 from lstore.page import Page
 import os
 from pathlib import Path
+import pickle
 
 #Can be accessed from table class and vice versa
 class BufferPool:
-    def __init__(self, capacity=100):
-        self.path = ""          # Path where buffer pages are stored.
-        self.LRU = LRU()         
+    def __init__(self, path='none', capacity=100):
+        self.parent_path = path          # path where metadata can be saved.
+        #self.LRU = LRU()         
         self.capacity = capacity  
         self.pool = {}           # Dictionary to store buffer pages indexed by buffer_id
         self.disk_page_count = 0
@@ -97,7 +98,6 @@ class BufferPool:
 
     def replace_page(self, table_name, page_key, page):
         table = self.table_access[table_name]
-        print(page_key, " check here")
         for key in self.pool.keys():
             if (self.pool[key][0]==table_name and self.pool[key][2]==page_key and self.pool[key][3]==True):
                 page.is_dirty = 1
@@ -160,6 +160,20 @@ class BufferPool:
     # def write_page(self, page, buffer_id):
     
 
-    # def close(self):
+    def close(self):
+        numkeys=0
+        for key in self.pool.keys():
+            numkeys+=1
+        for i in range(numkeys):
+            self.evict_bufferpool()
+        self.pool.clear()
+        filename = "bufferpool.pickle"
+        path = os.path.join(self.parent_path, filename)
+        with open(path, 'wb') as f:
+            pickle.dump(self, f) #dump all metadata, pagedirectory, and index
         
-    # need to create implementations in
+    def open(self):
+        filename = "bufferpool.pickle"
+        path = os.path.join(self.parent_path, filename)
+        with open(path, 'rb') as f:
+            self = pickle.load(f)
