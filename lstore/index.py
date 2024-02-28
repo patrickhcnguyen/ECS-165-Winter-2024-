@@ -14,7 +14,7 @@ class Index:
         # Return RIDs for records within range [begin, end] in column
         if self.indices[column] is None:
             raise ValueError(f"No index found for column {column}.")
-        return [rid for key, rids in self.indices[column].items() if begin <= key <= end for rid in rids]
+        return [rid for key, rids in self.indices[column].items() if key is not None and (begin is None or begin <= key) and (end is None or key <= end) for rid in rids]
 
     def remove_index(self, column, value, rid):
         if rid not in self.indices[column][value]:
