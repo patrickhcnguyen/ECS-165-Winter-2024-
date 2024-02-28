@@ -131,8 +131,8 @@ class Table:
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        #if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-        #    self.__merge()
+        if (self.total_tail_records%(max_records*2)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            self.__merge()
 
         self.total_tail_records += 1
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
