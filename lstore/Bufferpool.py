@@ -162,6 +162,8 @@ class BufferPool:
     
 
     def close(self):
+        for key in self.pool.keys():
+            self.evict_bufferpool()
         self.pool.clear()
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
