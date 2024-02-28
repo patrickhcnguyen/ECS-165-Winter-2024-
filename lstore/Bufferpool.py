@@ -88,6 +88,32 @@ class BufferPool:
         self.addPages(t_name, page, page_key, is_base)
         return [page, self.disk_page_count]
 
+    def get_tail_pages(self, table_name):
+        tail_pages = {}
+        table = self.table_access[table_name]
+        for page_key in range(table.num_tail_pages):
+            path = table.tail_page_directory[page_key]
+            f = open(path, "r")
+            page = Page()
+            self.capacity -= 1
+            lines = f.readlines()
+            page.tps = int(lines[0])
+            for i in range(len(lines)-1):
+                page.write(int(lines[i+1]))
+            tail_pages[page_key] = page
+        return tail_pages
+
+    def replace_page(self, table_name, page_key, page):
+        table = self.table_access[table_name]
+        path = table.page_directory[page_key]
+        f = open(path, 'w').close() #erases the current contents of the file
+        f = open(path, 'w')
+        for i in range(page.num_records):
+            data = page.read_val(i)
+            f.write(str(data)+"\n")
+        f.close()
+        pass
+
     def write_to_disk(self, page_to_evict): #for a single page
         buffer_id = page_to_evict
         t_name = self.pool[buffer_id][0]
