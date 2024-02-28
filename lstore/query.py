@@ -23,18 +23,8 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)[0]
         if rid is None:
             return False  # if primary key is not found
-        # writing special deletion marker like -1 into record's schema encoding column
-        max_records = self.table.max_records #64 records
-        page_number = rid // max_records
-        record_number = rid % max_records
-        base_page = self.table.page_directory[page_number+3]
-        deletion_marker = struct.pack('i', -1)
-        base_page.data[record_number * 64 + (4 * 8):record_number * 64 + (5 * 8)] = deletion_marker  # Assuming 4 system columns
-        # Update indices to reflect deletion! All functions will no longer consider this record, as it will be impossible to locate
         self.table.index.remove_index(self.table.key, primary_key, rid)
-
         return True
-
     
     
     """
