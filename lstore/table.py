@@ -122,8 +122,11 @@ class Table:
                     base_page_copies[base_page_index + 3] = base_page
                     base_page.overwrite(base_rid, 0)
             updatedQueue.add(base_rid)
-
+        print(" check page dir ")
+        for key in self.page_directory.keys():
+            print(key)
         for page_num in base_page_copies:
+            print(page_num)
             self.bufferpool.replace_page(self.name, page_num, base_page_copies[page_num])
             # self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
 

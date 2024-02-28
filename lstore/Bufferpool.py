@@ -97,13 +97,20 @@ class BufferPool:
 
     def replace_page(self, table_name, page_key, page):
         table = self.table_access[table_name]
-        path = table.page_directory[page_key]
-        f = open(path, 'w').close() #erases the current contents of the file
-        f = open(path, 'w')
-        for i in range(page.num_records):
-            data = page.read_val(i)
-            f.write(str(data)+"\n")
-        f.close()
+        print(page_key, " check here")
+        for key in self.pool.keys():
+            if (self.pool[key][0]==table_name and self.pool[key][2]==page_key and self.pool[key][3]==True):
+                page.is_dirty = 1
+                self.pool[key][1] = page
+                return
+        if page_key in table.page_directory:
+            path = table.page_directory[page_key]
+            f = open(path, 'w').close() #erases the current contents of the file
+            f = open(path, 'w')
+            for i in range(page.num_records):
+                data = page.read_val(i)
+                f.write(str(data)+"\n")
+            f.close()
         pass
 
     def write_to_disk(self, page_to_evict): #for a single page
