@@ -265,7 +265,7 @@ class Table:
     
     def sum_records(self, start, end, column_index):
         total_sum = 0
-        max_records = self.page_directory[0].max_records #64 records
+        max_records = self.max_records #64 records
         # get all rid's within list
         rid_list = self.index.locate_range(self.key, start, end)
         if len(rid_list) == 0:
@@ -273,20 +273,20 @@ class Table:
 
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)
-            indirection = self.page_directory[base_page_index].read_val(rid) # other version: change to only base_page_index
+            indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(rid) # other version: change to only base_page_index
             if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
-                data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
+                data = self.bufferpool.get_page(self.name, base_page_index+column_index+4, True).read_val(rid)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
                 tail_page_index = (indirection // max_records)*(self.num_columns+5)
-                data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
+                data = self.bufferpool.get_page(self.name, tail_page_index+column_index+4, False).read_val(indirection)
                 total_sum += data
         
         return total_sum
 
     def sum_records_version(self, start, end, column_index, version_num):
         total_sum = 0
-        max_records = self.page_directory[0].max_records #64 records
+        max_records = self.max_records #64 records
         # get all rid's within list
         rid_list = self.index.locate_range(self.key, start, end)
         if len(rid_list) == 0:
@@ -294,25 +294,25 @@ class Table:
 
         for rid in rid_list:
             base_page_index = (rid // max_records)*(self.num_columns+4)
-            indirection = self.page_directory[base_page_index].read_val(rid)
+            indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(rid)
             if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
-                data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
+                data = self.bufferpool.get_page(self.name, base_page_index+column_index+4, True).read_val(rid)
                 total_sum += data
             else: # has been updated, get tail page (return record in tail page)
                 counter = -version_num # how many times we have to go back
                 has_past = True # if there is more versions before the current tail record
                 while(counter > 0 and has_past): # keep going back until it reaches the desired version
                     tail_page_index = (indirection // max_records)*(self.num_columns+5)
-                    indirection = self.tail_page_directory[tail_page_index].read_val(indirection)
+                    indirection = self.bufferpool.get_page(self.name, tail_page_index, False).read_val(indirection)
                     counter -= 1
                     if indirection == -1 or indirection < self.tps:
                         has_past = False
                 if has_past:
                     tail_page_index = (indirection // max_records)*(self.num_columns+5)
-                    data = self.tail_page_directory[tail_page_index + column_index + 4].read_val(indirection)
+                    data = self.bufferpool.get_page(self.name, tail_page_index+column_index+4, False).read_val(indirection)
                     total_sum += data
                 else: # if it's asking for versions that doesn't exist
-                    data = self.page_directory[base_page_index + column_index + 4].read_val(rid)
+                    data = self.bufferpool.get_page(self.name, base_page_index+column_index+4, True).read_val(rid)
                     total_sum += data
         
         return total_sum

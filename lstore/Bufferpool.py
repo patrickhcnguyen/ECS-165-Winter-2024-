@@ -6,7 +6,7 @@ from pathlib import Path
 
 #Can be accessed from table class and vice versa
 class BufferPool:
-    def __init__(self, capacity=5):
+    def __init__(self, capacity=50):
         self.path = ""          # Path where buffer pages are stored.
         self.LRU = LRU()         
         self.capacity = capacity  
