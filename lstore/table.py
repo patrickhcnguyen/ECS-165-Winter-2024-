@@ -227,7 +227,7 @@ class Table:
                         data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                         columns.append(data)
             new_record = Record(key, search_key, columns)
-            print(new_record.columns)
+            #print(new_record.columns)
             record_list.append(new_record)
         return record_list
     
@@ -268,7 +268,6 @@ class Table:
             new_record = Record(key, search_key, columns)
             record_list.append(new_record)
             #print(new_record.columns)
-            key = self.index.locate(0, 92106477)[0]
             base_page_index = (key // max_records)*(self.num_columns+4)     
             #print(self.page_directory[base_page_index])       
         return record_list
