@@ -48,7 +48,7 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
-        primary_key = columns[self.table.key-4]
+        primary_key = columns[self.table.key]
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
             self.table.insert_record(*columns)  # if primary key not found
