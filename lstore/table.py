@@ -60,11 +60,10 @@ class Table:
         self.init_page_dir()
         self.init_tail_page_dir()
 
+        self.rid = 0  #rid of the next spot in the page range (not of the latest record)
         self.index = Index(self)
         for i in range(self.num_columns):
             self.index.create_index(i)
-        self.rid = 0  #rid of the next spot in the page range (not of the latest record)
-        
         self.total_tail_records = 0
         self.tps = 0 # INDEX FIX: Should be an array that represents each column
 
@@ -136,7 +135,7 @@ class Table:
             self.index.add_index(i, record[i], key_rid)
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+        if (self.total_tail_records%(max_records*40)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
             self.__merge()
 
         self.total_tail_records += 1

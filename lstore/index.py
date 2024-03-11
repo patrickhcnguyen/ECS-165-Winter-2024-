@@ -7,9 +7,13 @@ class Index:
     def locate(self, column, value):
         # Return RIDs for records matching value in column
         if self.indices[column] is None:
-            # parse through all pages in directory
-            raise ValueError(f"No index found for column {column}.")
-        return list(self.indices[column].get(value, []))
+            # temporarily create an index and delete after getting values
+            self.create_index(column)
+            key_list = list(self.indices[column].get(value, []))
+            self.drop_index(column)
+            return key_list
+        else:
+            return list(self.indices[column].get(value, []))
 
     def locate_range(self, column, begin, end):
         # Return RIDs for records within range [begin, end] in column
@@ -24,8 +28,7 @@ class Index:
 
     def add_index(self, column, key, rid):
         # Ensure the column has an index before adding
-        if self.indices[column] is None:
-            self.indices[column] = {}
+        self.create_index(column)
         # Add index entry for a column
         if key not in self.indices[column]:
             self.indices[column][key] = set()
@@ -51,9 +54,23 @@ class Index:
                 del self.indices[column][key]
 
     def create_index(self, column_number):
-        # Create an index for a specific column
+        # Create an index for a specific column by scanning all records
         if self.indices[column_number] is None:
             self.indices[column_number] = {}
+            num_records = self.table.rid
+            max_records = self.table.max_records #max_records per page
+            for i in range (num_records//max_records):
+                page = self.table.bufferpool.get_page_copy(self.table.name, i*(4+self.table.num_columns)+(4+column_number)).copy()
+                for j in range(page.num_records):
+                    self.add_index(column_number, page.read_val(j), i*(4+self.table.num_columns)+j)
+            if (num_records%max_records!=0):
+                i = num_records//max_records
+                page = self.table.bufferpool.get_page_copy(self.table.name, i*(4+self.table.num_columns)+(4+column_number)).copy()
+                for j in range(page.num_records):
+                    self.add_index(column_number, page.read_val(j), i*(4+self.table.num_columns)+j)
+            return
+
+
 
     def drop_index(self, column_number):
         # Drop an index for a specific column

@@ -76,7 +76,6 @@ def correctness_tester1():
     try:
         # select on columns without index and return empty list
         result = reorganize_result(query.select(10, 2, [1,1,1,1,1]))
-        print(result)
         if len(result) == 0:
             print("PASS[3]")
         else:
@@ -365,7 +364,7 @@ import glob
 import traceback
 import shutil   
 
-m2tests = [0,0,1]
+m2tests = [1,0,0]
 if m2tests[0] == 1:
     print("==========correctness tester===============")
     correctness_tester1() 
