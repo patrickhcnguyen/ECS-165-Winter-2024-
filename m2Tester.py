@@ -333,7 +333,7 @@ def merging_tester():
     merge_table = db.create_table('merge', 5, 0)
     query = Query(merge_table)
     update_nums = [2, 4, 8, 16]
-    records_num = 10000
+    records_num = 1000
     sample_count = 200
     select_repeat = 200
     for i in range(records_num):
@@ -349,6 +349,7 @@ def merging_tester():
                     update_record[4-idx] = None
                 query.update(i, *update_record)
         keys = sorted(sample(range(0, records_num),sample_count)) 
+        print("merging should be done")
         time = 0
         # 200 * 200 select
         while time < select_repeat:
@@ -364,7 +365,7 @@ import glob
 import traceback
 import shutil   
 
-m2tests = [1,0,0]
+m2tests = [0,0,1]
 if m2tests[0] == 1:
     print("==========correctness tester===============")
     correctness_tester1() 

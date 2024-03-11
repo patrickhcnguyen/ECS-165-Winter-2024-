@@ -8,7 +8,7 @@ import pickle
 #Can be accessed from table class and vice versa
 class BufferPool:
     def __init__(self, path='none', capacity=1000):
-        self.parent_path = path          # path where metadata can be saved.
+        self.parent_path = path          # path where pickle metadata can be saved.
         #self.LRU = LRU()         
         self.capacity = capacity  
         self.pool = {}           # Dictionary to store buffer pages indexed by buffer_id
@@ -64,8 +64,7 @@ class BufferPool:
         for key in self.pool.keys():
             if (self.pool[key][0]==t_name and self.pool[key][2]==page_key and self.pool[key][3]==is_base):
                 return [self.pool[key][1], key]
-        #if is_base==True:
-        #    print(" get base page ", page_key, " from disk")
+        #  load page into bufferpool from disk if it's not currently in bufferpool
         [page, buffer_id] = self.load_from_disk(t_name, page_key, is_base)
         return [page, buffer_id]
     
@@ -88,31 +87,6 @@ class BufferPool:
             page.write(int(lines[i+1]))
         self.addPages(t_name, page, page_key, is_base)
         return [page, self.disk_page_count]
-
-    def get_tail_pages(self, table_name):
-        tail_pages = {}
-        table = self.table_access[table_name]
-        for page_key in range(table.num_tail_pages+1):
-            tail_pages[page_key] = self.get_page(table_name, page_key, is_base=False)
-        return tail_pages
-
-    def replace_page(self, table_name, page_key, page):
-        table = self.table_access[table_name]
-        for key in self.pool.keys():
-            if (self.pool[key][0]==table_name and self.pool[key][2]==page_key and self.pool[key][3]==True):
-                page.is_dirty = 1
-                self.pool[key][1] = page
-                return
-        if page_key in table.page_directory:
-            path = table.page_directory[page_key]
-            f = open(path, 'w').close() #erases the current contents of the file
-            f = open(path, 'w')
-            f.write(str(page.tps)+"\n")
-            for i in range(page.num_records):
-                data = page.read_val(i)
-                f.write(str(data)+"\n")
-            f.close()
-        pass
 
     def write_to_disk(self, page_to_evict): #for a single page
         buffer_id = page_to_evict
@@ -152,14 +126,51 @@ class BufferPool:
     def get_page(self, t_name, page_key, is_base=True):
         page = self.get_page_access(t_name, page_key, is_base)[0]
         return page
-
-    def isFull(self):
-        return self.LRU.isFull()
-
-    # def read_page(self, path):
-
-    # def write_page(self, page, buffer_id):
     
+    def get_page_copy(self, t_name, page_key, is_base=True):
+        for key in self.pool.keys():
+            if (self.pool[key][0]==t_name and self.pool[key][2]==page_key and self.pool[key][3]==is_base):
+                return self.pool[key][1]
+        #  load page from disk if it's not currently in bufferpool
+        table = self.table_access[t_name]
+        path = ''
+        if is_base == True:
+            path = table.page_directory[page_key]
+        else: 
+            path = table.tail_page_directory[page_key]
+        f = open(path, "r")
+        page = Page()
+        lines = f.readlines()
+        page.tps = int(lines[0])
+        for i in range(len(lines)-1):
+            page.write(int(lines[i+1]))
+        return page
+
+    def get_tail_pages(self, table_name):
+        tail_pages = {}
+        table = self.table_access[table_name]
+        for page_key in range(table.num_tail_pages+1):
+            tail_pages[page_key] = self.get_page_copy(table_name, page_key, is_base=False)
+        return tail_pages
+
+    def replace_page(self, table_name, page_key, page):
+        table = self.table_access[table_name]
+        for key in self.pool.keys():
+            if (self.pool[key][0]==table_name and self.pool[key][2]==page_key and self.pool[key][3]==True):
+                page.is_dirty = 1
+                self.pool[key][1] = page
+        if page_key in table.page_directory:
+            path = table.page_directory[page_key]
+            f = open(path, 'w').close() #erases the current contents of the file
+            f = open(path, 'w')
+            f.write(str(page.tps)+"\n")
+            for i in range(page.num_records):
+                data = page.read_val(i)
+                f.write(str(data)+"\n")
+            f.close()
+        pass
+
+
 
     def close(self):
         numkeys=0

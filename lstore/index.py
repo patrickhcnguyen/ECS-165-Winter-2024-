@@ -7,6 +7,7 @@ class Index:
     def locate(self, column, value):
         # Return RIDs for records matching value in column
         if self.indices[column] is None:
+            # parse through all pages in directory
             raise ValueError(f"No index found for column {column}.")
         return list(self.indices[column].get(value, []))
 

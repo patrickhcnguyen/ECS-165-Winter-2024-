@@ -87,7 +87,7 @@ class Table:
     
 
     def __merge(self): #FIX: change to __merge after testing for bufferpool
-        #print("merge is happening...")
+        print("merge is happening...")
         # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         tail_records = self.bufferpool.get_tail_pages(self.name)
         base_page_copies = {}
@@ -109,7 +109,7 @@ class Table:
                         base_page = base_page_copies[base_page_index + 4 + i]
                     else: # else retrieve it from disk
                         # base_page = self.page_directory[base_page_index + 4 + i].copy() #BUFFERPOOL FIX: obtain copy from disk 
-                        base_page = self.bufferpool.get_page(self.name, base_page_index + 4 + i).copy()
+                        base_page = self.bufferpool.get_page_copy(self.name, base_page_index + 4 + i).copy()
                         base_page_copies[base_page_index + 4 + i] = base_page
                     base_page.overwrite(base_rid, value)
 
@@ -117,7 +117,7 @@ class Table:
                 if (base_page_index + 3) in base_page_copies: # if page has been stored, retrieve it from memory
                     base_page_copies[base_page_index + 3].overwrite(base_rid, 0)
                 else: # else retrieve it from disk
-                    base_page = self.bufferpool.get_page(self.name, base_page_index + 3).copy()
+                    base_page = self.bufferpool.get_page_copy(self.name, base_page_index + 3).copy()
                     # base_page = self.page_directory[base_page_index + 3].copy() #BUFFERPOOL FIX: obtain copy from disk 
                     base_page_copies[base_page_index + 3] = base_page
                     base_page.overwrite(base_rid, 0)
