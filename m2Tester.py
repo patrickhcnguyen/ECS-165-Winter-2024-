@@ -83,16 +83,15 @@ def correctness_tester1():
     except Exception as e:
         print("Wrong[3]")
 
-    try:
+
         # update on a primary key that does not exits
-        query.update(8, *[None,2,2,2,2])
-        result = reorganize_result(query.select(8, 0, [1,1,1,1,1]))
-        if len(result) == 0:
-            print("PASS[4]")
-        else:
-            print("Error[4]")
-    except Exception as e:
-        print("Wrong[4]")
+    query.update(8, *[None,2,2,2,2])
+    result = reorganize_result(query.select(8, 0, [1,1,1,1,1]))
+    if len(result) == 0:
+        print("PASS[4]")
+    else:
+        print("Error[4]")
+    
 
     try:
         # update that changes primary key,

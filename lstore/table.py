@@ -86,7 +86,7 @@ class Table:
     
 
     def __merge(self): #FIX: change to __merge after testing for bufferpool
-        print("merge is happening...")
+        # print("merge is happening...") <-- if uncommented, this will print even on the first ever update
         # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
         tail_records = self.bufferpool.get_tail_pages(self.name)
         base_page_copies = {}
@@ -130,12 +130,10 @@ class Table:
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
-        for i in range(len(record)):
-            self.index.delete_index(i, record[i], key_rid)
-            self.index.add_index(i, record[i], key_rid)
+
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        if (self.total_tail_records%(max_records*40)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
             self.__merge()
 
         self.total_tail_records += 1
@@ -158,21 +156,22 @@ class Table:
         # write the actual data columns of the tail record
         if (prev_version_rid == -1): # reference the base record during the update
             for i in range(self.num_columns):
-                value = record[i]
-                if (value == None):
-                    value = self.bufferpool.get_page(self.name, i+4+page_set*(self.num_columns+4), True).read_val(key_rid)
+                value = self.bufferpool.get_page(self.name, i+4+page_set*(self.num_columns+4), True).read_val(key_rid)
+                if (record[i] != None):
+                    self.index.delete_index(i, value, key_rid)
+                    self.index.add_index(i, record[i], key_rid)
+                    value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
             for i in range(self.num_columns):
-                value = record[i]
-                if (value == None):
-                    value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
-                    #print("get val from indirection: ", value)
-                page0 = self.bufferpool.get_page(self.name, pages_start, False)
+                value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
+                #print("get val from indirection: ", value)
+                if (record[i] != None):
+                    self.index.delete_index(i, value, key_rid)
+                    self.index.add_index(i, record[i], key_rid)
+                    value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
-                num_records=page0.num_records
-                #print("p", page0.read_val(num_records-1))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)

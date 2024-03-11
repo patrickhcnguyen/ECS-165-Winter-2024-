@@ -85,11 +85,12 @@ class Query:
     """
 
     def update(self, primary_key, *columns):
-        rid = self.table.index.locate(self.table.key, primary_key)
-        if rid is None:
+        rid_list = self.table.index.locate(self.table.key, primary_key)
+        if rid_list != []:
+            self.table.update_record(primary_key, *columns)
+            return True
+        else:
             return False  # if primary key not found
-        self.table.update_record(primary_key, *columns)
-        return True
 
 
 

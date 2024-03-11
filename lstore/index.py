@@ -4,6 +4,7 @@ class Index:
         self.table = table  # Reference to the table
         self.indices = [None] *  table.num_columns
 
+
     def locate(self, column, value):
         # Return RIDs for records matching value in column
         if self.indices[column] is None:
