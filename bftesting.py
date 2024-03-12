@@ -34,24 +34,24 @@ update2 = [None, None, 33, 12, 7]
 update3 = [None, 22, 33, 44, 7]
 update4 = [None, 11, 33, 44, 7]
 q.update(45, *update1)
-r= q.select_version(45, 0, [1, 1, 1, 1, 1], 0)[0].columns
+r= q.select_version(68, 0, [1, 1, 1, 1, 1], 0)[0].columns
 print(r)
 print("\n CHECK HERE ")
 q.update(45, *update2)
-r= q.select_version(45, 0, [1, 1, 1, 1, 1], 0)[0].columns
+r= q.select_version(68, 0, [1, 1, 1, 1, 1], 0)[0].columns
 #print(grades_table.tail_page_directory[4])
 print(r)
-q.update(45, *update3)
-q.update(45, *update4)
+q.update(68, *update3)
+q.update(68, *update4)
 for i in range(64*2):
-    q.update(45, *update4)
+    q.update(68, *update4)
 update5 = [None, None, 1, 2, 0]
 for i in range(64*2): #64-6 = 58
     q.update(1, *update5)
-q.update(45, *update2)
+q.update(68, *update2)
 
 
-r= q.select_version(45, 0, [1, 1, 1, 1, 1], 0)[0].columns
+r= q.select_version(68, 0, [1, 1, 1, 1, 1], 0)[0].columns
 print(r)
 r= q.select(47, 0, [1, 1, 1, 1, 1])[0].columns
 print(r)

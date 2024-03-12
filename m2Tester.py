@@ -340,15 +340,15 @@ def merging_tester():
         # 10000*4*(5+4*2+3*4+2*8+16*1) = 2280000 Byte = 556 Pages (4KB Page)
         update_num = update_nums[index]
         for count in range(update_num):
+            start = timer()
             for i in range(records_num):
                 update_record = [None, (i+101+count)%records_num, (i+201+count)%records_num,\
                  (i+301+count)%records_num, (i+401+count)%records_num]
                 for idx in range(index):
                     update_record[4-idx] = None
-                #start = timer()
                 query.update(i, *update_record)
-                #end = timer()
-                #print("    Update time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
+            end = timer()
+            print("    Update time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
             print("merging should be done")
         keys = sorted(sample(range(0, records_num),sample_count)) 
         

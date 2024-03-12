@@ -52,6 +52,9 @@ class Query:
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
             self.table.insert_record(*columns)  # if primary key not found
+            return True
+        else:
+            return False
 
     """
     # Read matching record with specified search key
