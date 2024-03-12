@@ -150,7 +150,7 @@ class BufferPool:
     def get_tail_pages(self, table_name):
         tail_pages = {}
         table = self.table_access[table_name]
-        tail_page_start = table.tps//table.max_records
+        tail_page_start = (table.tps//table.max_records)*(table.num_columns+5)
         for page_key in range(tail_page_start, table.num_tail_pages+1):
             tail_pages[page_key] = self.get_page_copy(table_name, page_key, is_base=False)
         return tail_pages

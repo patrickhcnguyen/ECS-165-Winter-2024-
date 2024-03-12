@@ -345,10 +345,10 @@ def merging_tester():
                  (i+301+count)%records_num, (i+401+count)%records_num]
                 for idx in range(index):
                     update_record[4-idx] = None
-                start = timer()
+                #start = timer()
                 query.update(i, *update_record)
-                end = timer()
-                print("    Update time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
+                #end = timer()
+                #print("    Update time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
             print("merging should be done")
         keys = sorted(sample(range(0, records_num),sample_count)) 
         
