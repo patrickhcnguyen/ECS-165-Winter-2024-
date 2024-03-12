@@ -345,15 +345,18 @@ def merging_tester():
                  (i+301+count)%records_num, (i+401+count)%records_num]
                 for idx in range(index):
                     update_record[4-idx] = None
+                start = timer()
                 query.update(i, *update_record)
+                end = timer()
+                print("    Update time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
+            print("merging should be done")
         keys = sorted(sample(range(0, records_num),sample_count)) 
-        print("merging should be done")
-        time = 0
+        
         # 200 * 200 select
-        while time < select_repeat:
+        """while time < select_repeat:
             time += 1
             for key in keys:
-                query.select(key, 0, [1,1,1,1,1])
+                query.select(key, 0, [1,1,1,1,1])"""
 
 from timeit import default_timer as timer
 from decimal import Decimal
@@ -363,7 +366,7 @@ import glob
 import traceback
 import shutil   
 
-m2tests = [1,0,0]
+m2tests = [0,0,1]
 if m2tests[0] == 1:
     print("==========correctness tester===============")
     correctness_tester1() 

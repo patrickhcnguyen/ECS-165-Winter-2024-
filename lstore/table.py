@@ -6,6 +6,8 @@ import struct
 import os
 import pickle
 
+from timeit import default_timer as timer
+from decimal import Decimal
 
 #last 4 columns of all records are listed below:
 INDIRECTION_COLUMN = 0
@@ -88,7 +90,13 @@ class Table:
     def __merge(self): #FIX: change to __merge after testing for bufferpool
         # print("merge is happening...") <-- if uncommented, this will print even on the first ever update
         # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
+        start = timer()
+        #delete timer stuf ------------------------------------------------------
+        tail_time = timer()
         tail_records = self.bufferpool.get_tail_pages(self.name)
+        end = timer()
+        print("   time to get tail pages : ", Decimal(end - tail_time).quantize(Decimal('0.01')), "seconds")
+        #delete some testing stuf above ---------------------------------------------
         base_page_copies = {}
         updatedQueue = set()
         max_records = self.max_records
@@ -124,7 +132,8 @@ class Table:
         for page_num in base_page_copies:
             self.bufferpool.replace_page(self.name, page_num, base_page_copies[page_num])
             # self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
-
+        end = timer()
+        print(" merging should be done Total time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
         self.tps = self.total_tail_records
 
     # QUERY FUNCTIONS
@@ -133,8 +142,8 @@ class Table:
 
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            self.__merge()
+        """if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            self.__merge()"""
 
         self.total_tail_records += 1
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
