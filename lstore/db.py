@@ -35,7 +35,7 @@ class Database():
                 path = os.path.join(self.path, file)
                 table = Table(file, num_columns, 0, path, self.bufferpool)
                 table.open()
-                table.self.lock_manager = LockManager()
+                table.lock_manager = LockManager()
                 self.tables[file] = table
                 self.table_paths[file] = path
                 self.bufferpool.add_table(file, table)

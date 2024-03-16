@@ -349,7 +349,6 @@ class Table:
 
         # directly update the current instance's attributes
         self.__dict__.update(loaded_table.__dict__)
-        self.lock_manager = LockManager()
         # Re-bind bufferpool's reference to this table
         self.bufferpool.add_table(self.name, self)
         
