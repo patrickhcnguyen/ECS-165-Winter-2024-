@@ -4,7 +4,7 @@ from lstore.page import Page
 import os
 from pathlib import Path
 import pickle
-
+import threading
 
 #Can be accessed from table class and vice versa
 class BufferPool:
@@ -15,6 +15,7 @@ class BufferPool:
         self.pool = {}           # Dictionary to store buffer pages indexed by buffer_id
         self.disk_page_count = 0
         self.table_access = {}
+        self.thread_lock = threading.Lock()
 
     def add_table(self, name, table):
         #print("Access to table ", name, " granted to bf")
@@ -39,14 +40,15 @@ class BufferPool:
             #print("adding a base page to pool ", page_key)
         #else:
             #print("adding a tail page to pool ", page_key)
-        if self.capacity == 0:
-            self.evict_bufferpool()
-        buffer_id = self.disk_page_count
-        #print("adding a buffer id to pool ", buffer_id)
-        self.pool[buffer_id] = [t_name, page, page_key, is_base]
-        self.capacity-=1
-        self.disk_page_count+=1
-        #print(" pages currently in bufferpool: ", list(self.pool.keys()))
+        with self.thread_lock:
+            if self.capacity == 0:
+                self.evict_bufferpool()
+            buffer_id = self.disk_page_count
+            #print("adding a buffer id to pool ", buffer_id)
+            self.pool[buffer_id] = [t_name, page, page_key, is_base]
+            self.capacity-=1
+            self.disk_page_count+=1
+            #print(" pages currently in bufferpool: ", list(self.pool.keys()))
     
     def evict_bufferpool(self):
         page_to_evict = list(self.pool.keys())[0]
@@ -62,12 +64,13 @@ class BufferPool:
         return
     
     def get_page_access(self, t_name, page_key, is_base=True):
-        for key in self.pool.keys():
-            if (self.pool[key][0]==t_name and self.pool[key][2]==page_key and self.pool[key][3]==is_base):
-                return [self.pool[key][1], key]
-        #  load page into bufferpool from disk if it's not currently in bufferpool
-        [page, buffer_id] = self.load_from_disk(t_name, page_key, is_base)
-        return [page, buffer_id]
+        with self.thread_lock:
+            for key in self.pool.keys():
+                if (self.pool[key][0]==t_name and self.pool[key][2]==page_key and self.pool[key][3]==is_base):
+                    return [self.pool[key][1], key]
+            #  load page into bufferpool from disk if it's not currently in bufferpool
+            [page, buffer_id] = self.load_from_disk(t_name, page_key, is_base)
+            return [page, buffer_id]
     
     def load_from_disk(self, t_name, page_key, is_base=True): #for a single page
         table = self.table_access[t_name]
@@ -184,8 +187,10 @@ class BufferPool:
         self.pool.clear()
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
+        self.thread_lock = None
         for key in self.table_access.keys():
             self.table_access[key].lock_manager = None
+            self.table_access[key].thread_lock = None
         with open(path, 'wb') as f:
             pickle.dump(self, f) #dump all metadata, pagedirectory, and index
         
@@ -199,3 +204,4 @@ class BufferPool:
         self.capacity = capacity  
         disk_page_count = bp.disk_page_count
         self.disk_page_count = disk_page_count
+        self.thread_lock = threading.Lock()

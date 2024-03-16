@@ -3,6 +3,7 @@ from lstore.Bufferpool import BufferPool
 import os
 import pickle
 from lstore.lock import Lock, LockManager
+import threading
 
 class Database():
 
@@ -36,6 +37,7 @@ class Database():
                 table = Table(file, num_columns, 0, path, self.bufferpool)
                 table.open()
                 table.lock_manager = LockManager()
+                table.thread_lock = threading.Lock()
                 self.tables[file] = table
                 self.table_paths[file] = path
                 self.bufferpool.add_table(file, table)
@@ -46,6 +48,7 @@ class Database():
         self.bufferpool.close()
         for key in self.tables.keys():
             self.tables[key].lock_manager = None
+            self.tables[key].thread_lock = None
             self.tables[key].close()
         self.tables.clear()
 

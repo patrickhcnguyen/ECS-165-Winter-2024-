@@ -46,7 +46,7 @@ class LockManager:
             for lock in locks:
                 if lock == 'r':
                     self.locks[rid].release_shared_lock()
-                else: #lock == 'w'
+                elif lock == 'w':
                     self.locks[rid].release_exclusive_lock()
 
 class Lock:

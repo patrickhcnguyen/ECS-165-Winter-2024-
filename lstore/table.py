@@ -6,6 +6,7 @@ from time import time
 import struct
 import os
 import pickle
+import threading
 
 from timeit import default_timer as timer
 from decimal import Decimal
@@ -37,6 +38,7 @@ class Table:
         self.num_columns = num_columns #excludes the 4 columns written above
         self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
         self.lock_manager = LockManager()
+        self.thread_lock = threading.Lock()
         
         #organize folders related to this table
         self.path = path
@@ -144,10 +146,14 @@ class Table:
 
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            self.__merge()
+    
+        with self.thread_lock:
+            self.total_tail_records += 1
 
-        self.total_tail_records += 1
+        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            with self.thread_lock:
+                self.__merge()
+
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
             self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
@@ -193,7 +199,13 @@ class Table:
 
     def insert_record(self, *columns):
         schema_encoding = '0' * self.num_columns
-
+        rid = 0
+        with self.thread_lock:
+            print(columns)
+            rid = self.rid
+            self.lock_manager.acquire_exclusive_lock(rid)
+            self.rid += 1
+        print(columns, "Ipassed the matrix or something")
         latest_page = self.bufferpool.get_page(self.name, self.num_pages, True)
         if latest_page.has_capacity() <= 0: #if there's no capacity
             self.init_page_dir() #add one base page (a set of physical pages, one for each column)
@@ -202,13 +214,12 @@ class Table:
         for i in range(self.num_columns):
             self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i])
         self.bufferpool.get_page(self.name, pages_start, True).write(-1) #indirection_column = -1 means no tail record exists
-        self.bufferpool.get_page(self.name, pages_start+1, True).write(self.rid) #rid column
+        self.bufferpool.get_page(self.name, pages_start+1, True).write(rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
-        self.index.add_index(self.key, columns[self.key], self.rid) # add index
+        self.index.add_index(self.key, columns[self.key], rid) # add index
         for i in range(self.num_columns):
-            self.index.add_index(i, columns[i], self.rid)
-        self.rid += 1
+            self.index.add_index(i, columns[i], rid)
 
     def select_record(self, search_key, search_column, projected_columns_index):
         # get index with search_key
