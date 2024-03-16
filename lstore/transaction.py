@@ -74,16 +74,26 @@ class Transaction:
 
             elif query.__name__ == 'insert':
                 #probably need to look out for phantom reads or something
+                #check if table lock exists:
+                success = table.lock_manager.block_table_lock()
                 print("insert")
-                pass
+                if success:
+                    if rid_val not in self.held_locks:
+                        self.held_locks["dynamic-state"] = []
+                    self.held_locks["dynamic-state"].append('r')
+                else:
+                    print("could not insert, table lock exists") #PLEASE HANDLE THIS
+                    return self.abort()
+                
 
             elif query.__name__ == 'delete':
                 #probably need to check if any other thread is using it at the time of delete
                 print("delete")
                 key_col = table.key
                 rid = table.index.locate(key_col, args[0])
-                if rid != []:
-                    rid_val = rid[0]
+                if rid == []:
+                    return self.abort()
+                rid_val = rid[0]
                 success = table.lock_manager.acquire_exclusive_lock(rid_val)
                 if success:
                     if rid_val not in self.held_locks:
@@ -132,6 +142,11 @@ class Transaction:
             # If the query has failed the transaction should abort
             if result == False:
                 return self.abort()
+            if query.__name__ == 'insert':
+                key_col = table.key
+                rid = table.index.locate(args[0][key_col])[0]
+                self.held_locks[rid] = []
+                self.held_locks[rid].append('w')
         table.lock_manager.release_all_locks(self.held_locks)
         return self.commit()
 
