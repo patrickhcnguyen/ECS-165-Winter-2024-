@@ -78,7 +78,7 @@ class Transaction:
                 success = table.lock_manager.block_table_lock()
                 print("insert")
                 if success:
-                    if rid_val not in self.held_locks:
+                    if "dynamic-state" not in self.held_locks:
                         self.held_locks["dynamic-state"] = []
                     self.held_locks["dynamic-state"].append('r')
                 else:
@@ -144,7 +144,7 @@ class Transaction:
                 return self.abort()
             if query.__name__ == 'insert':
                 key_col = table.key
-                rid = table.index.locate(args[0][key_col])[0]
+                rid = table.index.locate(key_col, args[key_col])[0]
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
         table.lock_manager.release_all_locks(self.held_locks)
