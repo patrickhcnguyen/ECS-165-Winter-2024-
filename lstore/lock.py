@@ -30,8 +30,13 @@ class LockManager:
 
     def release_all_locks(self, held_locks):
         print("release locks")
-        # for rid, locks in held_locks.items():
-        #     print("rid: ", rid, " locks: ", locks)
+        for rid, locks in held_locks.items():
+            # print("rid: ", rid, " locks: ", locks)
+            for lock in locks:
+                if lock == 'r':
+                    self.locks[rid].release_shared_lock()
+                else: #lock == 'w'
+                    self.locks[rid].release_exclusive_lock()
 
 class Lock:
     def __init__(self):
