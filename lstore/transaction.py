@@ -102,11 +102,12 @@ class Transaction:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
-                pass
 
             elif query.__name__ == 'increment':
-                #lock the whole table?
-                pass
+                success = table.lock_manager.acquire_table_lock()
+                if not success:
+                    print("cannot acquire W lock on table, another transaction is holding locks") #PLEASE HANDLE THIS
+                    return self.abort()
 
             else:
                 print("insert for now")
