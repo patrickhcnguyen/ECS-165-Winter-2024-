@@ -14,8 +14,11 @@ class LockManager:
             for rid in rid_list:
                 if rid not in self.locks:
                     self.locks[rid] = Lock()
-                self.locks[rid].get_shared_lock()
+                success = self.locks[rid].get_shared_lock()
+                if not success:
+                    return False
                 print("rid: ", rid, "read_count", self.locks[rid].read_count)
+            return True
 
     def acquire_exclusive_lock(self, rid):
         with self.thread_lock:
@@ -23,13 +26,12 @@ class LockManager:
                 pass
             else:
                 self.locks[rid] = Lock()
-            self.locks[rid].get_exclusive_lock()
-
+            return self.locks[rid].get_exclusive_lock()
 
     def release_all_locks(self, held_locks):
-        print("release all locks")
-        pass
-
+        print("release locks")
+        # for rid, locks in held_locks.items():
+        #     print("rid: ", rid, " locks: ", locks)
 
 class Lock:
     def __init__(self):

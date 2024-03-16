@@ -4,7 +4,7 @@ from lstore.transaction import Transaction
 from lstore.transaction_worker import TransactionWorker
 
 db = Database()
-db.open("./IMDEAD")
+db.open("./MOCHI")
 grades_table = db.create_table('Grades', 5, 0)
 q = Query(grades_table)
 
