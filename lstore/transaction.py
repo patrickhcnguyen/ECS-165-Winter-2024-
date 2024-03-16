@@ -36,20 +36,24 @@ class Transaction:
                 success = table.lock_manager.acquire_read_locks(rids)
                 if not success:
                     print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
+                
             elif query.__name__ == 'select_version':
                 print("select version")
                 rids = table.index.locate(args[1], args[0])
                 success = table.lock_manager.acquire_read_locks(rids)
                 if not success:
                     print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
+
             elif query.__name__ == 'update':
                 print("update")
                 key_col = table.key
@@ -63,12 +67,16 @@ class Transaction:
                     self.held_locks[rid_val].append('w')
                 else:
                     print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+                    return self.abort()
+
             elif query.__name__ == 'insert':
                 #probably need to look out for phantom reads or something
                 pass
+
             elif query.__name__ == 'delete':
                 #probably need to check if any other thread is using it at the time of delete
                 pass
+
             elif query.__name__ == 'sum':
                 print("sum")
                 key_col = table.key
@@ -76,10 +84,12 @@ class Transaction:
                 success = table.lock_manager.acquire_read_locks(rids)
                 if not success:
                     print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
+
             elif query.__name__ == 'sum_version':
                 print("sum version")
                 key_col = table.key
@@ -87,16 +97,20 @@ class Transaction:
                 success = table.lock_manager.acquire_read_locks(rids)
                 if not success:
                     print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
                 pass
+
             elif query.__name__ == 'increment':
                 #lock the whole table?
                 pass
+
             else:
                 print("insert for now")
+
             result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
@@ -106,7 +120,8 @@ class Transaction:
 
     
     def abort(self):
-        #TODO: do roll-back and any other necessary operations
+        for table in self.queries:
+            table.lock_manager.release_all_locks(self.held_locks)
         return False
 
     

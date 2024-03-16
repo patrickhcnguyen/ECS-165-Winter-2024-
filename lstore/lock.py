@@ -11,22 +11,33 @@ class LockManager:
     """
     def acquire_read_locks(self, rid_list):
         with self.thread_lock:
+            if "table" in self.locks:
+                return False
             for rid in rid_list:
                 if rid not in self.locks:
                     self.locks[rid] = Lock()
-                success = self.locks[rid].get_shared_lock()
-                if not success:
-                    return False
+                return self.locks[rid].get_shared_lock()
                 print("rid: ", rid, "read_count", self.locks[rid].read_count)
             return True
 
     def acquire_exclusive_lock(self, rid):
         with self.thread_lock:
+            if "table" in self.locks:
+                return False
             if rid in self.locks:
                 pass
             else:
                 self.locks[rid] = Lock()
             return self.locks[rid].get_exclusive_lock()
+
+
+    def acquire_table_lock(self):
+        with self.thread_lock:
+            if len(self.locks)!=0:
+                return False
+            self.locks["table"] = Lock()
+            return True
+
 
     def release_all_locks(self, held_locks):
         print("release locks")
