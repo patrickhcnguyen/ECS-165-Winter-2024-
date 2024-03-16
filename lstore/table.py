@@ -201,28 +201,39 @@ class Table:
     def insert_record(self, *columns):
         schema_encoding = '0' * self.num_columns
         rid = 0
+        num_pages = 0
         with self.thread_lock:
             #print(columns)
             rid = self.rid
             self.rid += 1
             self.lock_manager.acquire_exclusive_lock(rid)
-        #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
-        latest_page = self.bufferpool.get_page(self.name, self.num_pages, True)
-        if latest_page.has_capacity() <= 0: #if there's no capacity
-            self.init_page_dir() #add one base page (a set of physical pages, one for each column)
+                #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
+            if (rid!=0 and rid % self.max_records == 0): #if there's no capacity
+                self.init_page_dir() #add one base page (a set of physical pages, one for each column)
+            num_pages = self.num_pages
+            #print("      there are currently this many pages: ", self.num_pages)
         #print(" I added a page set by: ", threading.current_thread().name)
-        pages_start = (self.num_pages+1) - (self.num_columns+4)
+        pages_start = (num_pages+1) - (self.num_columns+4)
+        #print("      the other page start will show:", (rid // self.max_records)*(self.num_columns+4))
+        #print("      page_start is ", pages_start)
+        #data = []
         for i in range(self.num_columns):
             self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i])
+            #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, True).read_val(rid))
         self.bufferpool.get_page(self.name, pages_start, True).write(-1) #indirection_column = -1 means no tail record exists
         self.bufferpool.get_page(self.name, pages_start+1, True).write(rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
         #print(" I wrote the data columns: ", threading.current_thread().name)
         self.index.add_index(self.key, columns[self.key], rid) # add index
+        #record = self.select_record(columns[self.key], 0, [1, 1, 1, 1, 1])[0]
+        #index = self.index.locate(self.key, columns[self.key])
+        #print("correct rid ", rid, " vs ", index)
+        #print("Inserted columns", data, " result was ", record.columns)
         #print(" adding index done by: ", threading.current_thread().name)
         for i in range(self.num_columns):
             self.index.add_index(i, columns[i], rid)
+        #print("Inserted columns", columns, " result was ", data)
         #print(" insert done by: ", threading.current_thread().name)
 
     def select_record(self, search_key, search_column, projected_columns_index):
@@ -237,6 +248,7 @@ class Table:
         for key in key_rid:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
+            #print(" in select the page_start is ", base_page_index)
             indirection = self.bufferpool.get_page(self.name, base_page_index, True).read_val(key) # other version: change to only base_page_index
             columns = []
             if indirection == -1 or indirection < self.tps: # has not been updated (return record in base page)
@@ -251,7 +263,7 @@ class Table:
                         data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                         columns.append(data)
             new_record = Record(key, search_key, columns)
-            #print(new_record.columns)
+            #print("currently selecting: ", new_record.columns)
             record_list.append(new_record)
         return record_list
     

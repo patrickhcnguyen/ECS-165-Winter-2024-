@@ -76,7 +76,7 @@ class Transaction:
                 #probably need to look out for phantom reads or something
                 #check if table lock exists:
                 success = table.lock_manager.block_table_lock()
-                print("insert")
+                #print("insert")
                 if success:
                     if "dynamic-state" not in self.held_locks:
                         self.held_locks["dynamic-state"] = []
