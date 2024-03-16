@@ -33,7 +33,9 @@ class Transaction:
             if query.__name__ == 'select':
                 print("select")
                 rids = table.index.locate(args[1], args[0])
-                table.lock_manager.acquire_read_locks(rids)
+                success = table.lock_manager.acquire_read_locks(rids)
+                if not success:
+                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
@@ -41,7 +43,9 @@ class Transaction:
             elif query.__name__ == 'select_version':
                 print("select version")
                 rids = table.index.locate(args[1], args[0])
-                table.lock_manager.acquire_read_locks(rids)
+                success = table.lock_manager.acquire_read_locks(rids)
+                if not success:
+                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
@@ -68,7 +72,9 @@ class Transaction:
                 print("sum")
                 key_col = table.key
                 rids = self.index.locate_range(key_col, args[0], args[1])
-                table.lock_manager.acquire_read_locks(rids)
+                success = table.lock_manager.acquire_read_locks(rids)
+                if not success:
+                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
@@ -77,7 +83,9 @@ class Transaction:
                 print("sum version")
                 key_col = table.key
                 rids = self.index.locate_range(key_col, args[0], args[1])
-                table.lock_manager.acquire_read_locks(rids)
+                success = table.lock_manager.acquire_read_locks(rids)
+                if not success:
+                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                 for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
