@@ -184,6 +184,8 @@ class BufferPool:
         self.pool.clear()
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
+        for key in self.table_access.keys():
+            self.table_access[key].lock_manager = None
         with open(path, 'wb') as f:
             pickle.dump(self, f) #dump all metadata, pagedirectory, and index
         

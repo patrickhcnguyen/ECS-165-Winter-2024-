@@ -2,6 +2,7 @@ from lstore.table import Table
 from lstore.Bufferpool import BufferPool
 import os
 import pickle
+from lstore.lock import Lock, LockManager
 
 class Database():
 
@@ -34,6 +35,7 @@ class Database():
                 path = os.path.join(self.path, file)
                 table = Table(file, num_columns, 0, path, self.bufferpool)
                 table.open()
+                table.self.lock_manager = LockManager()
                 self.tables[file] = table
                 self.table_paths[file] = path
                 self.bufferpool.add_table(file, table)
@@ -43,6 +45,7 @@ class Database():
     def close(self):
         self.bufferpool.close()
         for key in self.tables.keys():
+            self.tables[key].lock_manager = None
             self.tables[key].close()
         self.tables.clear()
 
