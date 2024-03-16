@@ -130,7 +130,6 @@ class Transaction:
                 print("insert for now")
             result = query(*args)
             # If the query has failed the transaction should abort
-            print("HI THERE")
             if result == False:
                 return self.abort()
         table.lock_manager.release_all_locks(self.held_locks)

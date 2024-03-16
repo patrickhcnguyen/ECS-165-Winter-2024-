@@ -204,8 +204,8 @@ class Table:
         with self.thread_lock:
             #print(columns)
             rid = self.rid
-            self.lock_manager.acquire_exclusive_lock(rid)
             self.rid += 1
+            self.lock_manager.acquire_exclusive_lock(rid)
         #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
         latest_page = self.bufferpool.get_page(self.name, self.num_pages, True)
         if latest_page.has_capacity() <= 0: #if there's no capacity
@@ -223,7 +223,7 @@ class Table:
         #print(" adding index done by: ", threading.current_thread().name)
         for i in range(self.num_columns):
             self.index.add_index(i, columns[i], rid)
-        print(" insert done by: ", threading.current_thread().name)
+        #print(" insert done by: ", threading.current_thread().name)
 
     def select_record(self, search_key, search_column, projected_columns_index):
         # get index with search_key
