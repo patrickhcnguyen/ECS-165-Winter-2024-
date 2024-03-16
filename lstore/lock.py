@@ -3,27 +3,28 @@ import threading
 class LockManager:
     def __init__(self):
         self.locks = {} # key: rid, value: lock
+        self.thread_lock = threading.Lock() #this variable captures whichever thread accesses this LockManager object first (removing race condition to acquire the locks)
 
     """
     parameters:
     rid_list - list of rid's to acquire read locks
     """
     def acquire_read_locks(self, rid_list):
-        success = True
-        for rid in rid_list:
-            if rid not in self.locks:
-                self.locks[rid] = Lock()
-            success = self.locks[rid].get_shared_lock()
-            print("rid: ", rid, "read_count", self.locks[rid].read_count)
-        if success:
-            return True
-        else:
-            return False
+        with self.thread_lock:
+            for rid in rid_list:
+                if rid not in self.locks:
+                    self.locks[rid] = Lock()
+                self.locks[rid].get_shared_lock()
+                print("rid: ", rid, "read_count", self.locks[rid].read_count)
 
     def acquire_exclusive_lock(self, rid):
-        if rid not in self.locks:
-            self.locks[rid] = Lock()
-        return self.locks[rid].get_exclusive_lock()
+        with self.thread_lock:
+            if rid in self.locks:
+                pass
+            else:
+                self.locks[rid] = Lock()
+            self.locks[rid].get_exclusive_lock()
+
 
     def release_all_locks(self, held_locks):
         print("release all locks")
