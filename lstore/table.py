@@ -208,7 +208,7 @@ class Table:
             self.rid += 1
             self.lock_manager.acquire_exclusive_lock(rid)
                 #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
-            if (rid!=0 and rid % self.max_records == 0): #if there's no capacity
+            if (rid != 0 and rid % self.max_records == 0): #if there's no capacity
                 self.init_page_dir() #add one base page (a set of physical pages, one for each column)
             num_pages = self.num_pages
             #print("      there are currently this many pages: ", self.num_pages)
@@ -218,12 +218,12 @@ class Table:
         #print("      page_start is ", pages_start)
         #data = []
         for i in range(self.num_columns):
-            self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i])
+            self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i], rid)
             #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, True).read_val(rid))
-        self.bufferpool.get_page(self.name, pages_start, True).write(-1) #indirection_column = -1 means no tail record exists
-        self.bufferpool.get_page(self.name, pages_start+1, True).write(rid) #rid column
-        self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
-        self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
+        self.bufferpool.get_page(self.name, pages_start, True).write(-1, rid) #indirection_column = -1 means no tail record exists
+        self.bufferpool.get_page(self.name, pages_start+1, True).write(rid, rid) #rid column
+        self.bufferpool.get_page(self.name, pages_start+2, True).write(0, rid) #time_stamp column
+        self.bufferpool.get_page(self.name, pages_start+3, True).write(0, rid) #schema_encoding column
         #print(" I wrote the data columns: ", threading.current_thread().name)
         self.index.add_index(self.key, columns[self.key], rid) # add index
         #record = self.select_record(columns[self.key], 0, [1, 1, 1, 1, 1])[0]

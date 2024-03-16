@@ -15,12 +15,14 @@ class Page: #This class manages a physical page; the table class is in charge of
     def has_capacity(self): #returns the amount of ints that can be added to the base page before the total capacity of 4096 bits is reached
         return (self.max_records-self.num_records)
 
-    def write(self, value): #returns -1 if the base page is full and consequently, no change was done; returns rid (the index in the bytearray) if the value was written
+    def write(self, value, rid=None): #returns -1 if the base page is full and consequently, no change was done; returns rid (the index in the bytearray) if the value was written
         self.timestamp = datetime.datetime.now()
         index_within_page = -1
         if (self.has_capacity()>0):
             self.is_dirty = 1
             index_within_page = self.num_records
+            if rid!=None:
+                index_within_page = rid%self.max_records
             packed_bytes = struct.pack('i', value)
             self.data[index_within_page*64:index_within_page*64+len(packed_bytes)] = packed_bytes
             self.num_records += 1
