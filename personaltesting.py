@@ -39,5 +39,5 @@ x_worker.add_transaction(t2)
 
 # x_worker.run()
 t_worker.run()
-# x_worker.join()
+x_worker.join()
 t_worker.join()

@@ -6,10 +6,13 @@ class TransactionWorker:
     """
     # Creates a transaction worker object.
     """
-    def __init__(self, transactions = []):
+    def __init__(self, transactions = None):
         self.stats = []
         self.result = 0
-        self.transactions = transactions
+        print(transactions)
+        self.transactions = []
+        if (transactions != None):
+            self.transactions = transactions
         self.thread = None
         pass
 
@@ -24,6 +27,7 @@ class TransactionWorker:
     Runs all transaction as a thread
     """
     def run(self):
+        print(self.transactions)
         self.thread = threading.Thread(target=self.__run, args=())
         self.thread.start()
         # here you need to create a thread and call __run
