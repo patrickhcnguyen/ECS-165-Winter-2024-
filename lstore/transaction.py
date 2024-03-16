@@ -29,6 +29,7 @@ class Transaction:
 
     # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
+        print("transaction id:", self.id)
         for query, args, table in self.queries:
             if query.__name__ == 'select':
                 print("select")
@@ -48,12 +49,12 @@ class Transaction:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('w')
             else:
-                print("idk could be anything without locks")
+                print("prob insert")
             result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
                 return self.abort()
-            table.lock_manager.release_all_locks(self.held_locks)
+        table.lock_manager.release_all_locks(self.held_locks)
         return self.commit()
 
     

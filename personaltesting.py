@@ -24,9 +24,20 @@ t1.add_query(q.select, grades_table, 47, 0, [1, 1, 1, 1, 1])
 t1.add_query(q.select, grades_table, 52, 0, [1, 1, 1, 1, 1])
 t1.add_query(q.select, grades_table, 45, 0, [1, 1, 1, 1, 1])
 
+t2 = Transaction()
+t2.add_query(q.select, grades_table, 52, 0, [1, 1, 1, 1, 1])
+t2.add_query(q.select, grades_table, 45, 0, [1, 1, 1, 1, 1])
+t2.add_query(q.select, grades_table, 47, 0, [1, 1, 1, 1, 1])
 
 t_worker = TransactionWorker()
+x_worker = TransactionWorker()
+
 t_worker.add_transaction(t)
 t_worker.add_transaction(t1)
+
+x_worker.add_transaction(t2)
+
+# x_worker.run()
 t_worker.run()
+# x_worker.join()
 t_worker.join()
