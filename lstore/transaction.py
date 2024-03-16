@@ -53,19 +53,20 @@ class Transaction:
             elif query.__name__ == 'update':
                 print("update")
                 key_col = table.key
-                rid = table.index.locate(key_col, args[0])[0]
+                rid = table.index.locate(key_col, args[0])
                 if rid != []:
-                    success = table.lock_manager.acquire_exclusive_lock(rid)
-                    if success:
-                        if rid not in self.held_locks:
-                            self.held_locks[rid] = []
-                        self.held_locks[rid].append('w')
-                    else:
-                        print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
-            elif query.___name__ == 'insert':
+                    rid_val = rid[0]
+                success = table.lock_manager.acquire_exclusive_lock(rid_val)
+                if success:
+                    if rid not in self.held_locks:
+                        self.held_locks[rid_val] = []
+                    self.held_locks[rid_val].append('w')
+                else:
+                    print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+            elif query.__name__ == 'insert':
                 #probably need to look out for phantom reads or something
                 pass
-            elif query.___name__ == 'delete':
+            elif query.__name__ == 'delete':
                 #probably need to check if any other thread is using it at the time of delete
                 pass
             elif query.__name__ == 'sum':
