@@ -9,18 +9,21 @@ class LockManager:
     rid_list - list of rid's to acquire read locks
     """
     def acquire_read_locks(self, rid_list):
+        success = True
         for rid in rid_list:
             if rid not in self.locks:
                 self.locks[rid] = Lock()
-            self.locks[rid].get_shared_lock()
+            success = self.locks[rid].get_shared_lock()
             print("rid: ", rid, "read_count", self.locks[rid].read_count)
+        if success:
+            return True
+        else:
+            return False
 
     def acquire_exclusive_lock(self, rid):
-        if rid in self.locks:
-            pass
-        else:
+        if rid not in self.locks:
             self.locks[rid] = Lock()
-        self.locks[rid].get_exclusive_lock()
+        return self.locks[rid].get_exclusive_lock()
 
     def release_all_locks(self, held_locks):
         print("release all locks")

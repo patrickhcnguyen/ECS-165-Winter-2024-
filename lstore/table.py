@@ -97,7 +97,7 @@ class Table:
         tail_time = timer()
         tail_records = self.bufferpool.get_tail_pages(self.name)
         end = timer()
-        print("   time to get tail pages : ", Decimal(end - tail_time).quantize(Decimal('0.01')), "seconds")
+        # print("   time to get tail pages : ", Decimal(end - tail_time).quantize(Decimal('0.01')), "seconds")
         #delete some testing stuf above ---------------------------------------------
         base_page_copies = {}
         updatedQueue = set()
@@ -135,7 +135,7 @@ class Table:
             self.bufferpool.replace_page(self.name, page_num, base_page_copies[page_num])
             # self.page_directory[page_num] = base_page_copies[page_num] #BUFFERPOOL FIX: push updated pages back into disk and bufferpool
         end = timer()
-        print(" merging should be done Total time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
+        # print(" merging should be done Total time Taken: ", Decimal(end - start).quantize(Decimal('0.01')), "seconds")
         self.tps = self.total_tail_records
 
     # QUERY FUNCTIONS
@@ -286,7 +286,7 @@ class Table:
         total_sum = 0
         max_records = self.max_records #64 records
         # get all rid's within list
-        rid_list = self.index.locate_range(self.key, start, end)
+        rid_list = self.index.locate_range(column_index, start, end)
         if len(rid_list) == 0:
             return None
 
@@ -307,7 +307,7 @@ class Table:
         total_sum = 0
         max_records = self.max_records #64 records
         # get all rid's within list
-        rid_list = self.index.locate_range(self.key, start, end)
+        rid_list = self.index.locate_range(column_index, start, end)
         if len(rid_list) == 0:
             return None
         for rid in rid_list:
