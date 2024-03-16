@@ -38,17 +38,54 @@ class Transaction:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
                     self.held_locks[rid].append('r')
-            elif query.__name__ == 'update':
-                print("update")
-                key_col = query.table.key
-                rid = table.index.locate(key_col, args[0])[0]
-                if rid != []:
-                    table.lock_manager.acquire_exclusive_locks(rid)
+            elif query.__name__ == 'select_version':
+                print("select version")
+                rids = table.index.locate(args[1], args[0])
+                table.lock_manager.acquire_read_locks(rids)
+                for rid in rids:
                     if rid not in self.held_locks:
                         self.held_locks[rid] = []
-                    self.held_locks[rid].append('w')
-            # elif query.__name__ == 'sum': ###NEEDS TO BE DONEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-            #     print("hi")
+                    self.held_locks[rid].append('r')
+            elif query.__name__ == 'update':
+                print("update")
+                key_col = table.key
+                rid = table.index.locate(key_col, args[0])[0]
+                if rid != []:
+                    success = table.lock_manager.acquire_exclusive_lock(rid)
+                    if success:
+                        if rid not in self.held_locks:
+                            self.held_locks[rid] = []
+                        self.held_locks[rid].append('w')
+                    else:
+                        print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+            elif query.___name__ == 'insert':
+                #probably need to look out for phantom reads or something
+                pass
+            elif query.___name__ == 'delete':
+                #probably need to check if any other thread is using it at the time of delete
+                pass
+            elif query.__name__ == 'sum':
+                print("sum")
+                key_col = table.key
+                rids = self.index.locate_range(key_col, args[0], args[1])
+                table.lock_manager.acquire_read_locks(rids)
+                for rid in rids:
+                    if rid not in self.held_locks:
+                        self.held_locks[rid] = []
+                    self.held_locks[rid].append('r')
+            elif query.__name__ == 'sum_version':
+                print("sum version")
+                key_col = table.key
+                rids = self.index.locate_range(key_col, args[0], args[1])
+                table.lock_manager.acquire_read_locks(rids)
+                for rid in rids:
+                    if rid not in self.held_locks:
+                        self.held_locks[rid] = []
+                    self.held_locks[rid].append('r')
+                pass
+            elif query.__name__ == 'increment':
+                #lock the whole table?
+                pass
             else:
                 print("insert for now")
             result = query(*args)

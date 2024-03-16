@@ -25,6 +25,7 @@ class LockManager:
                 self.locks[rid] = Lock()
             self.locks[rid].get_exclusive_lock()
 
+
     def release_all_locks(self, held_locks):
         print("release all locks")
         pass
