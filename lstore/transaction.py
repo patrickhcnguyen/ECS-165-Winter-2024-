@@ -32,7 +32,7 @@ class Transaction:
         for query, args, table in self.queries:
             if query.__name__ == 'select':
                 print("select")
-                rids = table.index.locate(args[0], args[1])
+                rids = table.index.locate(args[1], args[0])
                 table.lock_manager.acquire_read_locks(rids)
                 for rid in rids:
                     if rid not in self.held_locks:
