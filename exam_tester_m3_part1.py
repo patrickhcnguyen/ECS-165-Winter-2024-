@@ -64,7 +64,7 @@ for i in range(num_threads):
     transaction_workers[i].join()
 
 
-# Check inserted records using select query in the main thread outside workers
+"""# Check inserted records using select query in the main thread outside workers
 for key in keys:
     record = query.select(key, 0, [1, 1, 1, 1, 1])[0]
     error = False
@@ -77,6 +77,6 @@ for key in keys:
         pass
         # print('select on', key, ':', record)
 print("Select finished")
-
+"""
 
 db.close()

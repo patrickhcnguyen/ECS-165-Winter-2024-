@@ -16,6 +16,7 @@ class BufferPool:
         self.disk_page_count = 0
         self.table_access = {}
         self.thread_lock = threading.Lock()
+        self.eviction_thread_lock = threading.Lock()
 
     def add_table(self, name, table):
         #print("Access to table ", name, " granted to bf")
@@ -51,20 +52,22 @@ class BufferPool:
             #print(" pages currently in bufferpool: ", list(self.pool.keys()))
     
     def evict_bufferpool(self):
-        page_to_evict = list(self.pool.keys())[0]
-        oldest_time = self.pool[page_to_evict][1].timestamp
-        for key in self.pool.keys():
-            page = self.pool[key][1]
-            if (page.pin==0): #select the page that is oldest of all the pages with 0 pins
-                if (page.timestamp<oldest_time):
-                    page_to_evict = key
-                    oldest_time = page.timestamp
-        #print("removing buffer page: ", page_to_evict)
-        self.write_to_disk(page_to_evict)
+        with self.eviction_thread_lock:
+            page_to_evict = list(self.pool.keys())[0]
+            oldest_time = self.pool[page_to_evict][1].timestamp
+            for key in self.pool.keys():
+                page = self.pool[key][1]
+                if (page.pin==0): #select the page that is oldest of all the pages with 0 pins
+                    if (page.timestamp<oldest_time):
+                        page_to_evict = key
+                        oldest_time = page.timestamp
+            #print("removing buffer page: ", page_to_evict)
+            self.write_to_disk(page_to_evict)
         return
     
     def get_page_access(self, t_name, page_key, is_base=True):
         with self.thread_lock:
+            #print("getting page: ", threading.current_thread().name)
             for key in self.pool.keys():
                 if (self.pool[key][0]==t_name and self.pool[key][2]==page_key and self.pool[key][3]==is_base):
                     return [self.pool[key][1], key]
@@ -188,9 +191,13 @@ class BufferPool:
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
         self.thread_lock = None
+        self.eviction_thread_lock = None
         for key in self.table_access.keys():
             self.table_access[key].lock_manager = None
             self.table_access[key].thread_lock = None
+            self.table_access[key].merge_thread_lock = None
+            self.table_access[key].index.thread_lock = None
+            self.table_access[key].index.createIndex_thread_lock = None
         with open(path, 'wb') as f:
             pickle.dump(self, f) #dump all metadata, pagedirectory, and index
         

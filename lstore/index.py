@@ -6,14 +6,15 @@ class Index:
         self.table = table  # Reference to the table
         self.indices = [None] *  table.num_columns
         self.thread_lock = threading.Lock()
+        self.createIndex_thread_lock = threading.Lock()
 
 
     def locate(self, column, value):
         # Return RIDs for records matching value in column
-        print("I am waiting for ", threading.current_thread().name)
+        #print("I am waiting for ", threading.current_thread().name)
         key_list = []
         with self.thread_lock:
-            print("I have acquired lowkey", threading.current_thread().name)
+            #print("I have acquired lowkey", threading.current_thread().name)
             if self.indices[column] is None:
                 # temporarily create an index and delete after getting values
                 self.create_index(column)
@@ -39,7 +40,9 @@ class Index:
     def add_index(self, column, key, rid):
         # Ensure the column has an index before adding
         with self.thread_lock:
+            #print("I am trying to add an index rn: ", threading.current_thread().name)
             self.create_index(column)
+            #print("Was that teh problem: ", threading.current_thread().name)
             # Add index entry for a column
             if key not in self.indices[column]:
                 self.indices[column][key] = set()
@@ -68,7 +71,8 @@ class Index:
 
     def create_index(self, column_number):
         # Create an index for a specific column by scanning all records
-        with self.thread_lock:
+        with self.createIndex_thread_lock:
+            #print("Is this the problem: ", threading.current_thread().name)
             if self.indices[column_number] is None:
                 self.indices[column_number] = {}
                 num_records = self.table.rid
@@ -88,6 +92,6 @@ class Index:
 
     def drop_index(self, column_number):
         # Drop an index for a specific column
-        with self.thread_lock:
+        with self.createIndex_thread_lock:
             if self.indices[column_number] is not None:
                 self.indices[column_number] = None

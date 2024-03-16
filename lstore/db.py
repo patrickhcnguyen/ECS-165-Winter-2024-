@@ -38,6 +38,7 @@ class Database():
                 table.open()
                 table.lock_manager = LockManager()
                 table.thread_lock = threading.Lock()
+                table.merge_thread_lock = threading.Lock()
                 self.tables[file] = table
                 self.table_paths[file] = path
                 self.bufferpool.add_table(file, table)
@@ -49,6 +50,7 @@ class Database():
         for key in self.tables.keys():
             self.tables[key].lock_manager = None
             self.tables[key].thread_lock = None
+            self.tables[key].merge_thread_lock = None
             self.tables[key].close()
         self.tables.clear()
 

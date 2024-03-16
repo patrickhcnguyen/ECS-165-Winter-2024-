@@ -39,6 +39,7 @@ class Table:
         self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
         self.lock_manager = LockManager()
         self.thread_lock = threading.Lock()
+        self.merge_thread_lock = threading.Lock()
         
         #organize folders related to this table
         self.path = path
@@ -151,7 +152,7 @@ class Table:
             self.total_tail_records += 1
 
         if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            with self.thread_lock:
+            with self.merge_thread_lock:
                 self.__merge()
 
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
@@ -201,15 +202,15 @@ class Table:
         schema_encoding = '0' * self.num_columns
         rid = 0
         with self.thread_lock:
-            print(columns)
+            #print(columns)
             rid = self.rid
             self.lock_manager.acquire_exclusive_lock(rid)
             self.rid += 1
-        print(columns, "Ipassed the matrix or something")
+        #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
         latest_page = self.bufferpool.get_page(self.name, self.num_pages, True)
         if latest_page.has_capacity() <= 0: #if there's no capacity
             self.init_page_dir() #add one base page (a set of physical pages, one for each column)
-        
+        #print(" I added a page set by: ", threading.current_thread().name)
         pages_start = (self.num_pages+1) - (self.num_columns+4)
         for i in range(self.num_columns):
             self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i])
@@ -217,9 +218,12 @@ class Table:
         self.bufferpool.get_page(self.name, pages_start+1, True).write(rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0) #schema_encoding column
+        #print(" I wrote the data columns: ", threading.current_thread().name)
         self.index.add_index(self.key, columns[self.key], rid) # add index
+        #print(" adding index done by: ", threading.current_thread().name)
         for i in range(self.num_columns):
             self.index.add_index(i, columns[i], rid)
+        print(" insert done by: ", threading.current_thread().name)
 
     def select_record(self, search_key, search_column, projected_columns_index):
         # get index with search_key
@@ -349,6 +353,8 @@ class Table:
     def close(self):
         filename = "tabledata.pickle"
         path = os.path.join(self.path, filename)
+        self.index.thread_lock = None
+        self.index.createIndex_thread_lock = None
         with open(path, 'wb') as f:
             pickle.dump(self, f) #dump all metadata, pagedirectory, and index 
     
@@ -362,4 +368,6 @@ class Table:
         self.__dict__.update(loaded_table.__dict__)
         # Re-bind bufferpool's reference to this table
         self.bufferpool.add_table(self.name, self)
+        self.index.thread_lock = threading.Lock()
+        self.index.createIndex_thread_lock = threading.Lock()
         
