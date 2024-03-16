@@ -4,6 +4,7 @@ import os
 import pickle
 from lstore.lock import Lock, LockManager
 import threading
+import shutil
 
 class Database():
 
@@ -25,6 +26,11 @@ class Database():
         
         filename = "dbdata.pickle"
         path = os.path.join(self.path, filename)
+        if not os.path.exists(path): #if dbdata.pickle does not exist, db was not closed properly last... Just make a new db
+            shutil.rmtree(self.path, ignore_errors=True)
+            os.makedirs(self.path)
+            self.bufferpool.parent_path = self.path
+            return
         with open(path, 'rb') as f:
             self.table_columns = pickle.load(f)
         self.bufferpool.parent_path = self.path
