@@ -62,7 +62,7 @@ class Transaction:
                     rid_val = rid[0]
                 success = table.lock_manager.acquire_exclusive_lock(rid_val)
                 if success:
-                    if rid not in self.held_locks:
+                    if rid_val not in self.held_locks:
                         self.held_locks[rid_val] = []
                     self.held_locks[rid_val].append('w')
                 else:
