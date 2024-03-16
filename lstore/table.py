@@ -1,6 +1,7 @@
 from lstore.index import Index
 from lstore.page import Page
 from lstore.Bufferpool import BufferPool
+from lstore.lock import Lock, LockManager
 from time import time
 import struct
 import os
@@ -35,7 +36,8 @@ class Table:
         self.key = key
         self.num_columns = num_columns #excludes the 4 columns written above
         self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
-
+        self.lock_manager = LockManager()
+        
         #organize folders related to this table
         self.path = path
         if path == 'none':

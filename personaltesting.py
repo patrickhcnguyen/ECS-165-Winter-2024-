@@ -1,0 +1,32 @@
+from lstore.db import Database
+from lstore.query import Query
+from lstore.transaction import Transaction
+from lstore.transaction_worker import TransactionWorker
+
+db = Database()
+db.open("./IMDEAD")
+grades_table = db.create_table('Grades', 5, 0)
+q = Query(grades_table)
+
+record1 = [45, 75, 82, 31, 49]
+record2 = [47, 800, 11, 22, 99]
+record3 = [52, 200, 11, 22, 99]
+record4 = [45, 800, 11, 99, 99]
+record5 = [47, 2, 3, 4, 5]
+
+t = Transaction()
+t.add_query(q.insert, grades_table, *record1)
+t.add_query(q.insert, grades_table, *record2)
+t.add_query(q.insert, grades_table, *record3)
+
+t1 = Transaction()
+t1.add_query(q.select, grades_table, 47, 0, [1, 1, 1, 1, 1])
+t1.add_query(q.select, grades_table, 52, 0, [1, 1, 1, 1, 1])
+t1.add_query(q.select, grades_table, 45, 0, [1, 1, 1, 1, 1])
+
+
+t_worker = TransactionWorker()
+t_worker.add_transaction(t)
+t_worker.add_transaction(t1)
+t_worker.run()
+t_worker.join()
