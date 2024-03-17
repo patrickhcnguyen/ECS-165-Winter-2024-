@@ -41,16 +41,31 @@ class BufferPool:
             #print("adding a base page to pool ", page_key)
         #else:
             #print("adding a tail page to pool ", page_key)
+        if self.capacity == 0:
+            self.evict_bufferpool()
+        buffer_id = self.disk_page_count
+            #print("adding a buffer id to pool ", buffer_id)
+        self.pool[buffer_id] = [t_name, page, page_key, is_base]
+        self.capacity-=1
+        self.disk_page_count+=1
+            #print(" pages currently in bufferpool: ", list(self.pool.keys()))
+    
+    def initPages(self, t_name, page, page_key, is_base=True): #should be called from table class
+        # Add a new page to the buffer pool and mark it as dirty
+        #if is_base == True:
+            #print("adding a base page to pool ", page_key)
+        #else:
+            #print("adding a tail page to pool ", page_key)
         with self.thread_lock:
             if self.capacity == 0:
                 self.evict_bufferpool()
             buffer_id = self.disk_page_count
-            #print("adding a buffer id to pool ", buffer_id)
+                #print("adding a buffer id to pool ", buffer_id)
             self.pool[buffer_id] = [t_name, page, page_key, is_base]
             self.capacity-=1
             self.disk_page_count+=1
             #print(" pages currently in bufferpool: ", list(self.pool.keys()))
-    
+
     def evict_bufferpool(self):
         with self.eviction_thread_lock:
             page_to_evict = list(self.pool.keys())[0]
@@ -66,7 +81,6 @@ class BufferPool:
         return
     
     def get_page_access(self, t_name, page_key, is_base=True):
-        #print("checkin durability for real", self.thread_lock)
         with self.thread_lock:
             #print("getting page: ", threading.current_thread().name)
             for key in self.pool.keys():

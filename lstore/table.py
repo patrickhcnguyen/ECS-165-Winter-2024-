@@ -82,14 +82,14 @@ class Table:
         for i in range(self.num_columns+4):
             self.num_pages += 1
             page = Page()
-            self.bufferpool.addPages(self.name, page, self.num_pages, True)
+            self.bufferpool.initPages(self.name, page, self.num_pages, True)
         pass
 
     def init_tail_page_dir(self): #adds one set of physical pages to the tail_page_directory, in case the tail pages have filled up or to initialize the tail page directory
         for i in range(self.num_columns+5):
             self.num_tail_pages += 1
             page = Page()
-            self.bufferpool.addPages(self.name, page, self.num_tail_pages, False)
+            self.bufferpool.initPages(self.name, page, self.num_tail_pages, False)
         pass
     
     
