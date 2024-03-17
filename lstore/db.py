@@ -35,7 +35,7 @@ class Database():
             self.table_columns = pickle.load(f)
         self.bufferpool.parent_path = self.path
         self.bufferpool.open()
-        print("check durability: ",self.bufferpool.thread_lock)
+        print("check durability: ",self.bufferpool)
 
         for file in os.listdir(self.path):
             if file!="bufferpool.pickle" and file!="dbdata.pickle":

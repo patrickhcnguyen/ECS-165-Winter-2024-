@@ -98,5 +98,7 @@ for i in range(grades_table.num_columns):
         #result2 = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
 print(rid, '        check this', key, ':', columns)
 print(grades_table.page_directory[base_page_index])
+print(grades_table.bufferpool.pool.keys())
+
 
 db.close()

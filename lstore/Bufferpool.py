@@ -81,6 +81,7 @@ class BufferPool:
         return
     
     def get_page_access(self, t_name, page_key, is_base=True):
+        #print(self.pool.keys())  
         with self.thread_lock:
             #print("getting page: ", threading.current_thread().name)
             for key in self.pool.keys():
@@ -96,6 +97,7 @@ class BufferPool:
             self.evict_bufferpool()
             self.capacity+=1
         path = ''
+        #print("loadinggggg")
         if is_base == True:
             path = table.page_directory[page_key]
         else: 
@@ -208,6 +210,7 @@ class BufferPool:
             self.evict_bufferpool()
             self.disk_page_count+=1
         self.pool.clear()
+        print(self.pool.keys())
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
         for key in self.table_access.keys():
@@ -227,4 +230,6 @@ class BufferPool:
         capacity = bp.capacity
         self.capacity = capacity  
         disk_page_count = bp.disk_page_count
-        self.disk_page_count = disk_page_count        
+        self.disk_page_count = disk_page_count 
+        print(self.pool.keys())  
+        print(bp.pool.keys())     
