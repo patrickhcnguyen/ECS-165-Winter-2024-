@@ -2,6 +2,7 @@ from lstore.db import Database
 from lstore.query import Query
 from lstore.transaction import Transaction
 from lstore.transaction_worker import TransactionWorker
+from lstore.Bufferpool import BufferPool
 
 from random import choice, randint, sample, seed
 
@@ -78,5 +79,24 @@ for key in keys:
         # print('select on', key, ':', record)
 print("Select finished")
 
+bp = db.bufferpool
+numkeys=0
+for key in bp.pool.keys():
+    numkeys+=1
+for i in range(numkeys):
+    bp.evict_bufferpool()
+    bp.disk_page_count+=1
+
+key = 92107369
+rid = grades_table.index.locate(grades_table.key, key)[0]
+base_page_index = (rid//64)*(grades_table.num_columns+4)
+columns = []
+for i in range(grades_table.num_columns):
+    data = grades_table.bufferpool.get_page(grades_table.name, base_page_index+i+4, True).read_val(rid)
+    print(grades_table.page_directory[base_page_index+i+4])
+    columns.append(data)
+        #result2 = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
+print(rid, '        check this', key, ':', columns)
+print(grades_table.page_directory[base_page_index])
 
 db.close()
