@@ -39,6 +39,7 @@ class Table:
         self.max_records = 64 #the max_records able to be stored in one page, this MUST mirror max_records from page class
         self.lock_manager = LockManager()
         self.thread_lock = threading.Lock()
+        self.update_thread_lock = threading.Lock()
         self.merge_thread_lock = threading.Lock()
         
         #organize folders related to this table
@@ -147,13 +148,13 @@ class Table:
 
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
-    
-        with self.thread_lock:
+        
+        tail_rid = 0
+        with self.update_thread_lock:
+            tail_rid = self.total_tail_records
             self.total_tail_records += 1
-
-        if (self.total_tail_records%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            with self.merge_thread_lock:
-                self.__merge()
+            #if ((self.total_tail_records-1)%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            #    self.__merge()
 
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
@@ -164,12 +165,12 @@ class Table:
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).read_val(key_rid)
-        index_within_page = self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid) #while inserting, use this chance to get the return value of write_update, the rid of the new tail record
+        self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid, tail_rid)
         #print("indirection column should be ",)
-        tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
-        self.bufferpool.get_page(self.name, 1+pages_start, False).write(tail_rid) #Writing to the tail's rid column
-        self.bufferpool.get_page(self.name, 2+pages_start, False).write(0)
-        self.bufferpool.get_page(self.name, 3+pages_start, False).write(0)
+        #tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
+        self.bufferpool.get_page(self.name, 1+pages_start, False).write(tail_rid, tail_rid) #Writing to the tail's rid column
+        self.bufferpool.get_page(self.name, 2+pages_start, False).write(0, tail_rid)
+        self.bufferpool.get_page(self.name, 3+pages_start, False).write(0, tail_rid)
         
         # write the actual data columns of the tail record
         if (prev_version_rid == -1): # reference the base record during the update
@@ -179,7 +180,7 @@ class Table:
                     self.index.delete_index(i, value, key_rid)
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
-                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
+                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
             for i in range(self.num_columns):
@@ -189,8 +190,8 @@ class Table:
                     self.index.delete_index(i, value, key_rid)
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
-                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value)
-        self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid)
+                self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
+        self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid, tail_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
         #update schema encoding column of base record

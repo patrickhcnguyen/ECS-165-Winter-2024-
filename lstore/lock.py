@@ -9,18 +9,18 @@ class LockManager:
     parameters:
     rid_list - list of rid's to acquire read locks
     """
-    def acquire_read_locks(self, rid_list):
+    def acquire_read_locks(self, rid_list, t_id):
         with self.thread_lock:
             if "table" in self.locks:
                 return False
             for rid in rid_list:
                 if rid not in self.locks:
                     self.locks[rid] = Lock()
-                return self.locks[rid].get_shared_lock()
+                return self.locks[rid].get_shared_lock(t_id)
                 #print("rid: ", rid, "read_count", self.locks[rid].read_count)
             return True
 
-    def acquire_exclusive_lock(self, rid):
+    def acquire_exclusive_lock(self, rid, t_id):
         with self.thread_lock:
             if "table" in self.locks:
                 return False
@@ -28,26 +28,26 @@ class LockManager:
                 pass
             else:
                 self.locks[rid] = Lock()
-            return self.locks[rid].get_exclusive_lock()
+            return self.locks[rid].get_exclusive_lock(t_id)
 
 
-    def acquire_table_lock(self):
+    def acquire_table_lock(self, t_id):
         with self.thread_lock:
             if len(self.locks)!=0:
                 return False
             self.locks["table"] = Lock()
-            return True
+            return self.locks["table"].get_exclusive_lock(t_id)
 
-    def block_table_lock(self):
+    def block_table_lock(self, t_id):
         with self.thread_lock:
             if "table" in self.locks:
                 return False
             else:
                 if "dynamic-state" not in self.locks:
                     self.locks["dynamic-state"] = Lock()
-                return self.locks["dynamic-state"].get_shared_lock()
+                return self.locks["dynamic-state"].get_shared_lock(t_id)
 
-    def release_all_locks(self, held_locks):
+    def release_all_locks(self, held_locks, t_id):
         print("release locks")
         with self.thread_lock:
             for rid, locks in held_locks.items():
@@ -62,29 +62,57 @@ class Lock:
     def __init__(self):
         self.read_count = 0
         self.write_count = 0
+        self.transaction_ids = []
 
     # read-lock: other transactions can only read but not write
-    def get_shared_lock(self): #read lock
+    def get_shared_lock(self, t_id=None): #read lock
         if self.write_count == 0:
             self.read_count += 1
+            if t_id!=None:
+                self.transaction_ids.append(t_id)
             return True
         return False
 
     # write-lock: other transactions cannot read or write
-    def get_exclusive_lock(self):
+    def get_exclusive_lock(self, t_id=None):
         if self.read_count == 0 and self.write_count == 0:
             self.write_count += 1
+            if t_id!=None:
+                self.transaction_ids.append(t_id)
             return True
-        return False
+        
+        if t_id == None: #nothingmore can be done without knowing a transaction id :(
+            return False
+        
+        check_compatibility = True #check if t_id currently holds an S or X lock and can be upgraded to an X lock (no other transactions are holding this lock)
+        for i in self.transaction_ids:
+            if i != t_id:
+                check_compatibility = False
+        if check_compatibility == True:
+            self.write_count += 1
+            if t_id!=None:
+                self.transaction_ids.append(t_id)
+            return True
+        return check_compatibility
 
-    def release_shared_lock(self):
+    def release_shared_lock(self, t_id=None):
         if self.read_count > 0:
             self.read_count -= 1
+            if t_id!=None:
+                try:
+                    self.transaction_ids.remove(t_id)
+                except ValueError:
+                    pass
             return True
         return False
 
-    def release_exclusive_lock(self):
+    def release_exclusive_lock(self, t_id=None):
         if self.write_count > 0:
             self.write_count -= 1
+            if t_id!=None:
+                try:
+                    self.transaction_ids.remove(t_id)
+                except ValueError:
+                    pass
             return True
         return False
