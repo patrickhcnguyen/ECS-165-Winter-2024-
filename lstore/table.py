@@ -41,6 +41,7 @@ class Table:
         self.thread_lock = threading.Lock()
         self.update_thread_lock = threading.Lock()
         self.merge_thread_lock = threading.Lock()
+        self.records_updating = []
         
         #organize folders related to this table
         self.path = path
@@ -93,9 +94,18 @@ class Table:
     
     
 
-    def __merge(self): #FIX: change to __merge after testing for bufferpool
+    def __merge(self, current_tail_record):
         # print("merge is happening...") <-- if uncommented, this will print even on the first ever update
         # tail_records = self.tail_page_directory.copy() # BUFFERPOOL FIX: obtain copies from disk of all tail records
+        ...
+        while True:
+            success = True
+            for record in self.records_updating:
+                if current_tail_record > record:
+                    success = False
+            if success:
+                break
+
         start = timer()
         #delete timer stuf ------------------------------------------------------
         tail_time = timer()
@@ -144,6 +154,8 @@ class Table:
 
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
+        current_tail_record = self.total_tail_records
+        self.records_updating.append(current_tail_record)
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
 
         max_records = self.max_records #this is defined in the page class as 64 records
@@ -153,9 +165,10 @@ class Table:
         with self.update_thread_lock:
             tail_rid = self.total_tail_records
             self.total_tail_records += 1
-            #if ((self.total_tail_records-1)%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-            #    self.__merge()
-
+            if ((self.total_tail_records-1)%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+                merge_thread = threading.Thread(target=self.__merge, args=(current_tail_record,))
+                merge_thread.start()
+    
         latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
         if latest_tail_page.has_capacity() <= 0: #if there's no capacity
             self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
@@ -196,6 +209,7 @@ class Table:
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.bufferpool.get_page(self.name, 3+page_set*(self.num_columns+4), True).overwrite(key_rid, 1)
+        self.records_updating.remove(current_tail_record)
         return
 
 
