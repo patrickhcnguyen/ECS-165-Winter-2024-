@@ -17,6 +17,7 @@ class Transaction:
             self.id = Transaction.id
             self.increment_id()
         self.increment_id()
+        self.commits = []
         pass
 
     def increment_id(self):
@@ -31,10 +32,12 @@ class Transaction:
     """
     def add_query(self, query, table, *args):
         self.queries.append((query, args, table))
+        self.commits.append(0)
         # use grades_table for aborting
 
     # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
+        i = 0
         for query, args, table in self.queries:
             if "table" in self.held_locks.keys(): #if a table lock is held by the transaction, all transactions will be able to get their locks by default, as the table lock won't be released until after commit
                 success = True
@@ -149,19 +152,27 @@ class Transaction:
             # If the query has failed the transaction should abort
             if result == False:
                 return self.abort()
+
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
                 table.lock_manager.locks[rid].transaction_ids.append(self.id)
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
+
+            self.commits[i] = 0
+            i += 1
+            
         return self.commit()
 
     
     def abort(self):
         print("aborted is happened ////////////////////////////////////")
+        i = len(self.commits)-1
         for query, args, table in reversed(self.queries):
-            if query.__name__ == 'insert':
+            if self.commits == 0:
+                pass
+            elif query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
                 record = self.select_record(args[key_col], key_col, [1]*table.num_columns)[0]
@@ -201,10 +212,10 @@ class Transaction:
                 prev_version_rid = self.bufferpool.get_page(self.name, tail_page_num, False).read_val(tail_rid)
                 incremented_data = self.bufferpool.get_page(self.name, tail_page_num+3+args[1], False).read_val(tail_rid)   
                 table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(prev_version_rid)
-
                 if (table.index.indices[args[1]] != None):
                     table.index.delete_index(args[1], incremented_data, rid)
                     table.index.add_index(args[1], incremented_data-1, rid)
+            i -= 1
         for query, args, table in self.queries: 
             table.lock_manager.release_all_locks(self.held_locks, self.id)
         return False

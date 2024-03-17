@@ -178,6 +178,8 @@ class Table:
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).read_val(key_rid)
+        if key == 92107369:
+            print(prev_version_rid)
         self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid, tail_rid)
         #print("indirection column should be ",)
         #tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
@@ -186,7 +188,7 @@ class Table:
         self.bufferpool.get_page(self.name, 3+pages_start, False).write(0, tail_rid)
         
         # write the actual data columns of the tail record
-        #data = []
+        data = []
         if (prev_version_rid == -1): # reference the base record during the update
             for i in range(self.num_columns):
                 value = self.bufferpool.get_page(self.name, i+4+page_set*(self.num_columns+4), True).read_val(key_rid)
@@ -195,9 +197,10 @@ class Table:
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
-                #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
+                data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
+            #print(prev_version_rid)
             for i in range(self.num_columns):
                 value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
                 #print("get val from indirection: ", value)
@@ -206,14 +209,17 @@ class Table:
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
-                #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
+                if key == 92107369:
+                    print(data)
+                data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid, tail_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.bufferpool.get_page(self.name, 3+page_set*(self.num_columns+4), True).overwrite(key_rid, 1)
-        #print(data, "expected wa this ", record)
         #self.records_updating.remove(current_tail_record)
+        if key == 92107369:
+            print(data)
         return
 
 
@@ -231,6 +237,8 @@ class Table:
                 self.init_page_dir() #add one base page (a set of physical pages, one for each column)
             num_pages = self.num_pages
             #print("      there are currently this many pages: ", self.num_pages)
+        if columns[self.key] == 92107369:
+            print(rid)
         #print(" I added a page set by: ", threading.current_thread().name)
         pages_start = (num_pages+1) - (self.num_columns+4)
         #print("      the other page start will show:", (rid // self.max_records)*(self.num_columns+4))
@@ -240,6 +248,8 @@ class Table:
             self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i], rid)
             #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, True).read_val(rid))
         self.bufferpool.get_page(self.name, pages_start, True).write(-1, rid) #indirection_column = -1 means no tail record exists
+        if columns[self.key] == 92107369:
+            print(self.bufferpool.get_page(self.name, pages_start, True).read_val(rid))
         self.bufferpool.get_page(self.name, pages_start+1, True).write(rid, rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0, rid) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0, rid) #schema_encoding column
@@ -264,6 +274,7 @@ class Table:
         # create a record with the info and return it
         record_list = []
         key_rid = self.index.locate(search_column, search_key)
+        #print(key_rid)
         for key in key_rid:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
@@ -289,6 +300,7 @@ class Table:
     def select_record_version(self, search_key, search_column, projected_columns_index, version_num):
         record_list = []
         key_rid = self.index.locate(search_column, search_key)
+        #print(search_key)
         for key in key_rid:
             max_records = self.max_records #64 records
             base_page_index = (key // max_records)*(self.num_columns+4)
@@ -311,10 +323,12 @@ class Table:
                     if indirection == -1 or indirection < self.tps:
                         has_past = False
                 if has_past:
+                    #print(self.bufferpool.get_page(self.name, tail_page_index+self.num_columns+4, False).read_val(indirection))
                     for i in range(len(projected_columns_index)):
                         if projected_columns_index[i] == 1:
                             data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                             columns.append(data)
+                    #print(columns)
                 else: # if it's asking for versions that doesn't exist, return base page
                     for i in range(len(projected_columns_index)):
                         if projected_columns_index[i] == 1:

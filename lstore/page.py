@@ -17,6 +17,7 @@ class Page: #This class manages a physical page; the table class is in charge of
 
     def write(self, value, rid=None): #returns -1 if the base page is full and consequently, no change was done; returns rid (the index in the bytearray) if the value was written
         self.timestamp = datetime.datetime.now()
+
         index_within_page = -1
         if (self.has_capacity()>0):
             self.is_dirty = 1
