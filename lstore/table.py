@@ -32,7 +32,7 @@ class Table:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-    def __init__(self, name, num_columns, key, path='none', bufferpool='none'):
+    def __init__(self, name, num_columns, key, path='none', bufferpool='none', load='none'):
         self.name = name
         self.key = key
         self.num_columns = num_columns #excludes the 4 columns written above
@@ -67,8 +67,7 @@ class Table:
         self.num_pages = -1 #stores the amount of pages minus 1
         self.num_tail_pages = -1 #stores the amount of pages minus 1
         print("nooooooo")
-        if len(self.bufferpool.pool.keys())!=0:
-            print("yooooo")
+        if load == 'none':
             self.init_page_dir()
             self.init_tail_page_dir()
 

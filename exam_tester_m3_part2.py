@@ -25,22 +25,106 @@ num_threads = 8
 keys = []
 records = {}
 seed(3562901)
-print(grades_table.bufferpool)
-key = 92107369
-rid = grades_table.index.locate(grades_table.key, key)[0]
-base_page_index = (rid//64)*(grades_table.num_columns+4)
-columns = []
-for i in range(grades_table.num_columns):
-    print(base_page_index+i+4)
-    print(grades_table.bufferpool.pool.keys())
-    data = grades_table.bufferpool.get_page(grades_table.name, base_page_index+i+4, True).read_val(rid)
-    print(grades_table.page_directory[base_page_index+i+4])
-    columns.append(data)
-        #result2 = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
-print(rid, '        check this', key, ':', columns)
-print(grades_table.page_directory[base_page_index])
 
-"""
+# re-generate records for testing
+for i in range(0, number_of_records):
+    key = 92106429 + i
+    keys.append(key)
+    records[key] = [key, randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20)]
+    #print(records[key])
+
+transaction_workers = []
+transactions = []
+
+for i in range(number_of_transactions):
+    transactions.append(Transaction())
+
+for i in range(num_threads):
+    transaction_workers.append(TransactionWorker())
+
+
+
+
+updated_records = {}
+# x update on every column
+for j in range(number_of_operations_per_record):
+    for key in keys:
+        updated_columns = [None, None, None, None, None]
+        updated_records[key] = records[key].copy()
+        for i in range(2, grades_table.num_columns):
+            # updated value
+            value = randint(0, 20)
+            updated_columns[i] = value
+            # update our test directory
+            updated_records[key][i] = value
+        transactions[key % number_of_transactions].add_query(query.select, grades_table, key, 0, [1, 1, 1, 1, 1])
+        transactions[key % number_of_transactions].add_query(query.update, grades_table, key, *updated_columns)
+print("Update finished")
+
+
+# add trasactions to transaction workers  
+for i in range(number_of_transactions):
+    transaction_workers[i % num_threads].add_transaction(transactions[i])
+
+
+
+# run transaction workers
+for i in range(num_threads):
+    transaction_workers[i].run()
+
+# wait for workers to finish
+for i in range(num_threads):
+    transaction_workers[i].join()
+
+    
+
+score = len(keys)
+for key in keys:
+    correct = records[key]
+    query = Query(grades_table)
+    
+    result = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
+    if correct != result:
+        print("errors are in the first selection")
+        print('select error on primary key', key, ':', result, ', correct:', correct)
+        score -= 1
+print('Version -1 Score:', score, '/', len(keys))
+
+v2_score = len(keys)
+for key in keys:
+    correct = records[key]
+    query = Query(grades_table)
+    
+    result = query.select_version(key, 0, [1, 1, 1, 1, 1], -2)[0].columns
+    if correct != result:
+        print("errors are in the second selection:((((((((()))))))))")
+        print('select error on primary key', key, ':', result, ', correct:', correct)
+        v2_score -= 1
+print('Version -2 Score:', v2_score, '/', len(keys))
+if score != v2_score:
+    print('Failure: Version -1 and Version -2 scores must be same')
+
+
+score = len(keys)
+for key in keys:
+    correct = updated_records[key]
+    query = Query(grades_table)
+    
+    result = query.select_version(key, 0, [1, 1, 1, 1, 1], 0)[0].columns
+    if correct != result:
+        rid = grades_table.index.locate(grades_table.key, key)[0]
+        base_page_index = (rid//64)*(grades_table.num_columns+4)
+        columns = []
+        for i in range(grades_table.num_columns):
+            data = grades_table.bufferpool.get_page(grades_table.name, base_page_index+i+4, True).read_val(rid)
+            columns.append(data)
+        #result2 = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
+        print(rid, 'select error on primary key', key, ':', result, ', correct:', correct)
+        print(rid, '        check this', key, ':', columns, ', correct:', correct)
+
+        score -= 1
+print('Version 0 Score:', score, '/', len(keys))
+
 number_of_aggregates = 100
 valid_sums = 0
 for i in range(0, number_of_aggregates):
@@ -70,5 +154,5 @@ for i in range(0, number_of_aggregates):
     if column_sum == result:
         valid_sums += 1
 print("Aggregate version 0 finished. Valid Aggregations: ", valid_sums, '/', number_of_aggregates)
-"""
+
 db.close()

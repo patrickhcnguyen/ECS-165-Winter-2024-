@@ -41,7 +41,7 @@ class Database():
             if file!="bufferpool.pickle" and file!="dbdata.pickle":
                 num_columns = self.table_columns[file]
                 path = os.path.join(self.path, file)
-                table = Table(file, num_columns, 0, path, self.bufferpool)
+                table = Table(file, num_columns, 0, path, self.bufferpool, "load")
                 table.open()
                 table.bufferpool = self.bufferpool
                 table.lock_manager = LockManager()
