@@ -66,7 +66,9 @@ class Table:
         self.tail_page_directory = {}
         self.num_pages = -1 #stores the amount of pages minus 1
         self.num_tail_pages = -1 #stores the amount of pages minus 1
-        if not self.bufferpool.pool:
+        print("nooooooo")
+        if len(self.bufferpool.pool.keys())!=0:
+            print("yooooo")
             self.init_page_dir()
             self.init_tail_page_dir()
 
