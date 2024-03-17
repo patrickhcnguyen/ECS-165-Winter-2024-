@@ -154,25 +154,25 @@ class Table:
 
     # QUERY FUNCTIONS
     def update_record(self, key, *record):
-        current_tail_record = self.total_tail_records
-        self.records_updating.append(current_tail_record)
+        #current_tail_record = self.total_tail_records
+        #self.records_updating.append(current_tail_record)
         key_rid = (self.index.locate(self.key, key))[0] #get the row number of the inputted key
 
         max_records = self.max_records #this is defined in the page class as 64 records
         page_set = key_rid // max_records #select the base page (row of physical pages) that row falls in
         
         tail_rid = 0
+        num_tail_pages = 0
         with self.update_thread_lock:
             tail_rid = self.total_tail_records
             self.total_tail_records += 1
-            if ((self.total_tail_records-1)%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
-                merge_thread = threading.Thread(target=self.__merge, args=(current_tail_record,))
-                merge_thread.start()
-    
-        latest_tail_page = self.bufferpool.get_page(self.name, self.num_tail_pages, False)
-        if latest_tail_page.has_capacity() <= 0: #if there's no capacity
-            self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
-        pages_start = (self.num_tail_pages+1) - (self.num_columns+5)
+            #if ((self.total_tail_records-1)%(max_records*20)==0): #merge if the current total_tail_records has filled up 5 tail-pages more than since the last merge
+            #    merge_thread = threading.Thread(target=self.__merge, args=(current_tail_record,))
+            #    merge_thread.start()
+            if (tail_rid != 0 and tail_rid % self.max_records == 0): #if there's no capacity
+                self.init_tail_page_dir() #add one tail page (a set of physical pages, one for each column)
+            num_tail_pages = self.num_tail_pages
+        pages_start = (num_tail_pages+1) - (self.num_columns+5)
 
         # write the first 4 columns of the tail record: indirection column, rid, schema_encoding, and time_stamp
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
@@ -186,6 +186,7 @@ class Table:
         self.bufferpool.get_page(self.name, 3+pages_start, False).write(0, tail_rid)
         
         # write the actual data columns of the tail record
+        #data = []
         if (prev_version_rid == -1): # reference the base record during the update
             for i in range(self.num_columns):
                 value = self.bufferpool.get_page(self.name, i+4+page_set*(self.num_columns+4), True).read_val(key_rid)
@@ -194,6 +195,7 @@ class Table:
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
+                #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         else: # reference the prev_tail_record during the update
             prev_tpage_set = prev_version_rid // max_records
             for i in range(self.num_columns):
@@ -204,12 +206,14 @@ class Table:
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
+                #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid, tail_rid)
         #update indirection column of base record
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
         #update schema encoding column of base record
         self.bufferpool.get_page(self.name, 3+page_set*(self.num_columns+4), True).overwrite(key_rid, 1)
-        self.records_updating.remove(current_tail_record)
+        #print(data, "expected wa this ", record)
+        #self.records_updating.remove(current_tail_record)
         return
 
 
@@ -318,7 +322,7 @@ class Table:
                             columns.append(data)
             new_record = Record(key, search_key, columns)
             record_list.append(new_record)
-            #print(new_record.columns)
+            #print("this is the actual ", new_record.columns)
             base_page_index = (key // max_records)*(self.num_columns+4)     
             #print(self.page_directory[base_page_index])       
         return record_list

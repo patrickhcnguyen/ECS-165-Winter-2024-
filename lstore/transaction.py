@@ -40,9 +40,8 @@ class Transaction:
                 success = True
 
             elif query.__name__ == 'select':
-                print("select")
+                #print("select")
                 rids = table.index.locate(args[1], args[0])
-                print(table.lock_manager)
                 success = table.lock_manager.acquire_read_locks(rids, self.id)
                 if not success:
                     print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
@@ -65,7 +64,7 @@ class Transaction:
                     self.held_locks[rid].append('r')
 
             elif query.__name__ == 'update':
-                print("update")
+                #print("update")
                 key_col = table.key
                 rid = table.index.locate(key_col, args[0])
                 if rid == []:
@@ -160,6 +159,7 @@ class Transaction:
 
     
     def abort(self):
+        print("aborted is happened ////////////////////////////////////")
         for query, args, table in reversed(self.queries):
             if query.__name__ == 'insert':
                 key_col = table.key
