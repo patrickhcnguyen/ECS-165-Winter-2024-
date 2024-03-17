@@ -174,6 +174,7 @@ class Transaction:
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
+                #record = self.select_record(columns[self.key], 0, [1, 1, 1, 1, 1])[0]
                 #table.index.delete_index(rid)
 
         for query, args, table in self.queries: 

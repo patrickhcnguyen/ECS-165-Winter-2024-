@@ -9,7 +9,7 @@ class LockManager:
     parameters:
     rid_list - list of rid's to acquire read locks
     """
-    def acquire_read_locks(self, rid_list, t_id):
+    def acquire_read_locks(self, rid_list, t_id=None):
         with self.thread_lock:
             if "table" in self.locks:
                 return False
@@ -20,7 +20,7 @@ class LockManager:
                 #print("rid: ", rid, "read_count", self.locks[rid].read_count)
             return True
 
-    def acquire_exclusive_lock(self, rid, t_id):
+    def acquire_exclusive_lock(self, rid, t_id=None):
         with self.thread_lock:
             if "table" in self.locks:
                 return False
