@@ -66,6 +66,7 @@ class BufferPool:
         return
     
     def get_page_access(self, t_name, page_key, is_base=True):
+        #print("checkin durability for real", self.thread_lock)
         with self.thread_lock:
             #print("getting page: ", threading.current_thread().name)
             for key in self.pool.keys():
@@ -179,6 +180,11 @@ class BufferPool:
         pass
 
 
+    def save(self):
+        filename = "bufferpool.pickle"
+        path = os.path.join(self.parent_path, filename)
+        with open(path, 'wb') as f:
+            pickle.dump(self, f) #dump all metadata, pagedirectory, and index
 
     def close(self):
         numkeys=0
@@ -190,8 +196,6 @@ class BufferPool:
         self.pool.clear()
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
-        self.thread_lock = None
-        self.eviction_thread_lock = None
         for key in self.table_access.keys():
             self.table_access[key].lock_manager = None
             self.table_access[key].thread_lock = None
@@ -199,8 +203,6 @@ class BufferPool:
             self.table_access[key].merge_thread_lock = None
             self.table_access[key].index.thread_lock = None
             self.table_access[key].index.createIndex_thread_lock = None
-        with open(path, 'wb') as f:
-            pickle.dump(self, f) #dump all metadata, pagedirectory, and index
         
     def open(self):
         filename = "bufferpool.pickle"
@@ -211,5 +213,4 @@ class BufferPool:
         capacity = bp.capacity
         self.capacity = capacity  
         disk_page_count = bp.disk_page_count
-        self.disk_page_count = disk_page_count
-        self.thread_lock = threading.Lock()
+        self.disk_page_count = disk_page_count        

@@ -9,7 +9,6 @@ class TransactionWorker:
     def __init__(self, transactions = None):
         self.stats = []
         self.result = 0
-        print(transactions)
         self.transactions = []
         if (transactions != None):
             self.transactions = transactions

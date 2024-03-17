@@ -36,6 +36,8 @@ class Transaction:
     # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
         for query, args, table in self.queries:
+            print("table has thread lockL ", table.thread_lock)
+            print("bufferpool has thread lockL ", table.bufferpool.thread_lock)
             if "table" in self.held_locks.keys(): #if a table lock is held by the transaction, all transactions will be able to get their locks by default, as the table lock won't be released until after commit
                 success = True
 

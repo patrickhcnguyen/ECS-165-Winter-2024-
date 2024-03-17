@@ -35,6 +35,7 @@ class Database():
             self.table_columns = pickle.load(f)
         self.bufferpool.parent_path = self.path
         self.bufferpool.open()
+        print("check durability: ",self.bufferpool.thread_lock)
 
         for file in os.listdir(self.path):
             if file!="bufferpool.pickle" and file!="dbdata.pickle":
@@ -42,6 +43,7 @@ class Database():
                 path = os.path.join(self.path, file)
                 table = Table(file, num_columns, 0, path, self.bufferpool)
                 table.open()
+                table.bufferpool = self.bufferpool
                 table.lock_manager = LockManager()
                 table.thread_lock = threading.Lock()
                 table.update_thread_lock = threading.Lock()
@@ -54,6 +56,9 @@ class Database():
 
     def close(self):
         self.bufferpool.close()
+        self.bufferpool.thread_lock = None
+        self.bufferpool.eviction_thread_lock = None
+        self.bufferpool.save()
         for key in self.tables.keys():
             self.tables[key].lock_manager = None
             self.tables[key].thread_lock = None
