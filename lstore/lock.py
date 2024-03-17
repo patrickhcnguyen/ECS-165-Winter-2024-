@@ -60,9 +60,9 @@ class LockManager:
                 # print("rid: ", rid, " locks: ", locks)
                 for lock in locks:
                     if lock == 'r':
-                        self.locks[rid].release_shared_lock()
+                        self.locks[rid].release_shared_lock(t_id)
                     elif lock == 'w':
-                        self.locks[rid].release_exclusive_lock()
+                        self.locks[rid].release_exclusive_lock(t_id)
 
 class Lock:
     def __init__(self):

@@ -152,10 +152,9 @@ class Transaction:
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
-                table.lock_manager.locks[rid].transaction_id.append(self.id)
+                table.lock_manager.locks[rid].transaction_ids.append(self.id)
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
-        table.lock_manager.release_all_locks(self.held_locks)
         return self.commit()
 
     
@@ -206,10 +205,11 @@ class Transaction:
                     table.index.delete_index(args[1], incremented_data, rid)
                     table.index.add_index(args[1], incremented_data-1, rid)
         for query, args, table in self.queries: 
-            table.lock_manager.release_all_locks(self.held_locks)
+            table.lock_manager.release_all_locks(self.held_locks, self.id)
         return False
 
     
     def commit(self):
-        # TODO: commit to database
+        for query, args, table in self.queries: 
+            table.lock_manager.release_all_locks(self.held_locks, self.id)
         return True

@@ -195,6 +195,7 @@ class BufferPool:
         for key in self.table_access.keys():
             self.table_access[key].lock_manager = None
             self.table_access[key].thread_lock = None
+            self.table_access[key].update_thread_lock = None
             self.table_access[key].merge_thread_lock = None
             self.table_access[key].index.thread_lock = None
             self.table_access[key].index.createIndex_thread_lock = None
