@@ -26,16 +26,19 @@ class Query:
         record_number = rid % max_records
 
         # Determine the base page index for the schema encoding column
-        schema_encoding_page_index = self.table.num_columns + SCHEMA_ENCODING_COLUMN
+        schema_encoding_page_col = 2
 
         # Retrieve the base page for the schema encoding column
-        base_page = self.table.bufferpool.get_page(self.table.name, page_number * (self.table.num_columns + 4) + schema_encoding_page_index, True)
+        base_page = self.table.bufferpool.get_page(self.table.name, page_number * (self.table.num_columns + 4) + schema_encoding_page_col, True)
 
         # Mark the record as deleted by setting its schema encoding to -1
         base_page.overwrite(record_number, -1)
 
-        # Update indices to reflect deletion
-        self.table.index.remove_index(self.table.key, primary_key, rid)
+        key_col = self.table.key
+        rid = self.table.index.locate(key_col, primary_key)[0]
+        record = self.select_record(primary_key, key_col, [1]*self.table.num_columns)[0]
+        for i in range(len(record)):
+            self.table.index.delete_index(i, record[i], rid)
 
         return True
 

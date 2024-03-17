@@ -67,8 +67,9 @@ class Transaction:
                 print("update")
                 key_col = table.key
                 rid = table.index.locate(key_col, args[0])
-                if rid != []:
-                    rid_val = rid[0]
+                if rid == []:
+                    return self.abort()
+                rid_val = rid[0]
                 success = table.lock_manager.acquire_exclusive_lock(rid_val, self.id)
                 if success:
                     if rid_val not in self.held_locks:
@@ -82,7 +83,6 @@ class Transaction:
                 #probably need to look out for phantom reads or something
                 #check if table lock exists:
                 success = table.lock_manager.block_table_lock(self.id)
-                #print("insert")
                 if success:
                     if "dynamic-state" not in self.held_locks:
                         self.held_locks["dynamic-state"] = []
@@ -102,6 +102,7 @@ class Transaction:
                 rid_val = rid[0]
                 success = table.lock_manager.acquire_exclusive_lock(rid_val, self.id)
                 if success:
+                    args[0] = rid_val
                     if rid_val not in self.held_locks:
                         self.held_locks[rid_val] = []
                     self.held_locks[rid_val].append('w')
@@ -109,41 +110,41 @@ class Transaction:
                     print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
                     return self.abort()
 
-            elif query.__name__ == 'sum':
+            elif query.__name__ == 'sum': #scanning operation
                 print("sum")
-                key_col = table.key
-                rids = self.index.locate_range(key_col, args[0], args[1])
-                success = table.lock_manager.acquire_read_locks(rids, self.id)
-                if not success:
-                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
-                    return self.abort()
-                for rid in rids:
-                    if rid not in self.held_locks:
-                        self.held_locks[rid] = []
-                    self.held_locks[rid].append('r')
-
-            elif query.__name__ == 'sum_version':
-                print("sum version")
-                key_col = table.key
-                rids = self.index.locate_range(key_col, args[0], args[1])
-                success = table.lock_manager.acquire_read_locks(rids, self.id)
-                if not success:
-                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
-                    return self.abort()
-                for rid in rids:
-                    if rid not in self.held_locks:
-                        self.held_locks[rid] = []
-                    self.held_locks[rid].append('r')
-
-            elif query.__name__ == 'increment': #increment is guarenteed to go through, it will lock the whole table and the other queries of the transaction can use this table lock, which can not even be released until the end of the transaction:
                 success = table.lock_manager.acquire_table_lock(self.id)
                 if not success:
-                    print("cannot acquire W lock on table, another transaction is holding locks") #PLEASE HANDLE THIS
+                    print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
                     return self.abort()
-                self.held_locks["table"] = ['t']
+                self.held_locks["table"] = ['w']
+
+            elif query.__name__ == 'sum_version': #scanning operation
+                print("sum version")
+                success = table.lock_manager.acquire_table_lock(self.id)
+                if not success:
+                    print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
+                    return self.abort()
+                self.held_locks["table"] = ['w']
+
+            elif query.__name__ == 'increment':
+                key_col = table.key
+                rid = table.index.locate(key_col, args[0])
+                if rid == []:
+                    return self.abort()
+                rid_val = rid[0]
+                success = table.lock_manager.acquire_exclusive_lock(rid_val, self.id)
+                if success:
+                    args[0] = rid_val
+                    if rid_val not in self.held_locks:
+                        self.held_locks[rid_val] = []
+                    self.held_locks[rid_val].append('w')
+                else:
+                    print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+                    return self.abort()
 
             else:
-                print("insert for now")
+                print("Nothing....")
+
             result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
@@ -151,7 +152,7 @@ class Transaction:
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
-                table.lock_manager.locks[rid].append(self.id)
+                table.lock_manager.locks[rid].transaction_id.append(self.id)
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
         table.lock_manager.release_all_locks(self.held_locks)
@@ -160,23 +161,50 @@ class Transaction:
     
     def abort(self):
         for query, args, table in reversed(self.queries):
-            #mark all changed rows as "needs deletion"
-            #if insert
-                #find rid given the primary key using index locate
-                #mark the inserted row for deletion
-                #remove index
-            #if update:
-                #find base-rid given the primary key using index locate
-                #place special marker for the updated row to be ignored in select, sum, and merge
-            #if delete:
-                #remove deletion marker
-                #add index back
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
-                #record = self.select_record(columns[self.key], 0, [1, 1, 1, 1, 1])[0]
-                #table.index.delete_index(rid)
+                record = self.select_record(args[key_col], key_col, [1]*table.num_columns)[0]
+                for i in range(len(record)):
+                    table.index.delete_index(i, record[i], rid)
+            elif query.__name__ == 'update':
+                key_col = table.key
+                rid = table.index.locate(key_col, args[1][key_col])[0] #must deference args this way in case primary_key was changed
+                max_records = table.max_records
+                page_set = rid // max_records 
+                tail_rid = table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).read_val(rid)
+                tail_page_num = (tail_rid // max_records)*(table.num_columns+5)
+                prev_version_rid = self.bufferpool.get_page(self.name, tail_page_num, False).read_val(tail_rid)  
+                table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(prev_version_rid)
+                data = self.select_record_version(args[key_col], key_col, [1]*table.num_columns, -1)[0]
+                for i in range(len(data)):
+                    if (table.index.indices[i] != None and args[i] != None):
+                        table.index.delete_index(i, data[i], rid)
+                        table.index.add_index(i, data[i], rid)
+            elif query.__name__ == 'delete':
+                rid =  args[0]
+                max_records = table.max_records
+                page_number = rid // max_records
+                self.table.bufferpool.get_page(self.table.name, page_number * (self.table.num_columns + 4) + 2, True).overwrite(rid, 0)
+                data = []
+                for i in range(len(table.num_columns)):
+                    data.append(self.table.bufferpool.get_page(self.table.name, page_number * (self.table.num_columns + 4) + 4 +i, True).read_val(rid))
+                    if table.index.indices[i] != None:
+                        table.index.add_index(i, data[i], rid)
+            elif query.__name__ == 'increment': #increment simply creates an update/tail record but the arguments passed are different than those of the update function
+                key_col = table.key
+                rid = args[0]
+                max_records = table.max_records
+                page_set = rid // max_records 
+                tail_rid = table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).read_val(rid)
+                tail_page_num = (tail_rid // max_records)*(table.num_columns+5)
+                prev_version_rid = self.bufferpool.get_page(self.name, tail_page_num, False).read_val(tail_rid)
+                incremented_data = self.bufferpool.get_page(self.name, tail_page_num+3+args[1], False).read_val(tail_rid)   
+                table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(prev_version_rid)
 
+                if (table.index.indices[args[1]] != None):
+                    table.index.delete_index(args[1], incremented_data, rid)
+                    table.index.add_index(args[1], incremented_data-1, rid)
         for query, args, table in self.queries: 
             table.lock_manager.release_all_locks(self.held_locks)
         return False

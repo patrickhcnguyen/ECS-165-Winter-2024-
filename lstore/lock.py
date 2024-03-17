@@ -33,8 +33,14 @@ class LockManager:
 
     def acquire_table_lock(self, t_id):
         with self.thread_lock:
-            if len(self.locks)!=0:
+            check_compatibility = True #checks whetehr the other locks existing are of the same transaction
+            for lock in self.locks:
+                for i in lock.transaction_ids:
+                    if i != t_id:
+                        check_compatibility = False
+            if check_compatibility == False:
                 return False
+            
             self.locks["table"] = Lock()
             return self.locks["table"].get_exclusive_lock(t_id)
 
@@ -45,7 +51,7 @@ class LockManager:
             else:
                 if "dynamic-state" not in self.locks:
                     self.locks["dynamic-state"] = Lock()
-                return self.locks["dynamic-state"].get_shared_lock(t_id)
+                return self.locks["dynamic-state"].get_shared_lock(t_id) #get a shared lock so other transactions that are inserting can also do so, this lock is to simply stop scanning operations
 
     def release_all_locks(self, held_locks, t_id):
         print("release locks")
@@ -67,6 +73,16 @@ class Lock:
     # read-lock: other transactions can only read but not write
     def get_shared_lock(self, t_id=None): #read lock
         if self.write_count == 0:
+            self.read_count += 1
+            if t_id!=None:
+                self.transaction_ids.append(t_id)
+            return True
+        
+        check_compatibility = True #check if t_id currently holds an X on this lock
+        for i in self.transaction_ids:
+            if i != t_id:
+                check_compatibility = False
+        if check_compatibility == True:
             self.read_count += 1
             if t_id!=None:
                 self.transaction_ids.append(t_id)
