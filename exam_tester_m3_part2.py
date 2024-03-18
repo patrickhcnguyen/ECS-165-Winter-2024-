@@ -89,9 +89,7 @@ for key in keys:
     
     result = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
     if correct != result:
-        if key == 92107428:
-        #print("errors are in the first selection")
-            print('select error on primary key', key, ':', result, ', correct:', correct)
+        print('select error on primary key', key, ':', result, ', correct:', correct)
         score -= 1
 print('Version -1 Score:', score, '/', len(keys))
 
@@ -102,11 +100,7 @@ for key in keys:
     
     result = query.select_version(key, 0, [1, 1, 1, 1, 1], -2)[0].columns
     if correct != result:
-        if key == 92107428:
-        #print("errors are in the first selection")
-            print('select error on primary key', key, ':', result, ', correct:', correct)
-        #print("errors are in the second selection:((((((((()))))))))")
-        #print('select error on primary key', key, ':', result, ', correct:', correct)
+        print('select error on primary key', key, ':', result, ', correct:', correct)
         v2_score -= 1
 print('Version -2 Score:', v2_score, '/', len(keys))
 if score != v2_score:
