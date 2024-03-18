@@ -33,6 +33,7 @@ t1.add_query(q.insert, grades_table, *insert7)
 t2 = Transaction()
 t2.add_query(q.update, grades_table, 45, *record4)
 t2.add_query(q.update, grades_table, 45, *record5)
+t2.add_query(q.sum_version, grades_table, 11, 90, 3, -1)
 t2.add_query(q.insert, grades_table, *insert6)
 
 

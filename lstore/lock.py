@@ -36,11 +36,11 @@ class LockManager:
             for lock in self.locks:
                 for i in self.locks[lock].transaction_ids:
                     if i != t_id:
-                        print("table lock blocked by ", i, self.locks[lock].transaction_ids)
+                        #print("table lock blocked by ", i, self.locks[lock].transaction_ids)
                         check_compatibility = False
             if check_compatibility == False:
                 return False
-            print("acquiring table lock ")
+            #print("acquiring table lock ")
             self.locks["table"] = Lock()
             return self.locks["table"].get_exclusive_lock(t_id)
 

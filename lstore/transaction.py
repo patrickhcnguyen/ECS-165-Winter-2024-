@@ -16,7 +16,7 @@ class Transaction:
         with Transaction.thread_lock:
             self.id = Transaction.id
             self.increment_id()
-        print("transaction with id ",self.id)
+        #print("transaction with id ",self.id)
         self.commits = []
         pass
 
@@ -48,7 +48,7 @@ class Transaction:
                 rids = table.index.locate(args[1], args[0])
                 success = table.lock_manager.acquire_read_locks(rids, self.id)
                 if not success:
-                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    #print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                     return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
@@ -56,11 +56,11 @@ class Transaction:
                     self.held_locks[rid].append('r')
                 
             elif query.__name__ == 'select_version':
-                print("select version")
+                #print("select version")
                 rids = table.index.locate(args[1], args[0])
                 success = table.lock_manager.acquire_read_locks(rids, self.id)
                 if not success:
-                    print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
+                    #print("cannot acquire S lock, another thread is writing") #PLEASE HANDLE THIS
                     return self.abort()
                 for rid in rids:
                     if rid not in self.held_locks:
@@ -86,20 +86,20 @@ class Transaction:
             elif query.__name__ == 'insert':
                 #probably need to look out for phantom reads or something
                 #check if table lock exists:
-                print("insert")
+                #print("insert")
                 success = table.lock_manager.block_table_lock(self.id)
                 if success:
                     if "dynamic-state" not in self.held_locks:
                         self.held_locks["dynamic-state"] = []
                     self.held_locks["dynamic-state"].append('r')
                 else:
-                    print("could not insert, table lock exists") #PLEASE HANDLE THIS
+                    #print("could not insert, table lock exists") #PLEASE HANDLE THIS
                     return self.abort()
                 
 
             elif query.__name__ == 'delete':
                 #probably need to check if any other thread is using it at the time of delete
-                print("delete")
+                #print("delete")
                 key_col = table.key
                 rid = table.index.locate(key_col, args[0])
                 if rid == []:
@@ -112,24 +112,22 @@ class Transaction:
                         self.held_locks[rid_val] = []
                     self.held_locks[rid_val].append('w')
                 else:
-                    print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+                    #print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
                     return self.abort()
 
             elif query.__name__ == 'sum': #scanning operation
-                print("sum")
+                #print("sum")
                 success = table.lock_manager.acquire_table_lock(self.id)
                 if not success:
-                    print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
+                    #print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
                     return self.abort()
                 self.held_locks["table"] = ['w']
 
             elif query.__name__ == 'sum_version': #scanning operation
-                print("sum version")
+                #print("sum version")
                 success = table.lock_manager.acquire_table_lock(self.id)
-                if success:
-                    print("gonna do sum version")
                 if not success:
-                    print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
+                    #print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
                     return self.abort()
                 self.held_locks["table"] = ['w']
 
@@ -150,7 +148,8 @@ class Transaction:
                     return self.abort()
 
             else:
-                print("Nothing....")
+                #print("Nothing....")
+                pass
 
             result = True
             if query.__name__ == 'insert':
@@ -159,7 +158,6 @@ class Transaction:
                 result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
-                print("insert was aborted probably")
                 return self.abort()
 
             if query.__name__ == 'insert':
@@ -178,7 +176,6 @@ class Transaction:
         #print(self.id, "abort is happening ////////////////////////////////////")
         i = len(self.commits)-1
         for query, args, table in reversed(self.queries):
-            print("checking i ", i)
             if self.commits[i] == 1 or self.commits[i] == 0:
                 pass
             elif query.__name__ == 'insert':
@@ -202,7 +199,7 @@ class Transaction:
                 prev_version_rid = table.bufferpool.get_page(table.name, tail_page_num, False).read_val(tail_rid)  
                 table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(rid, prev_version_rid)
                 data = table.select_record_version(primary_key, key_col, [1]*table.num_columns, -1)[0].columns
-                print("reverting back to ", data)
+                #print("reverting back to ", data)
                 for i in range(len(data)):
                     if (table.index.indices[i] != None and args[i+1] != None):
                         table.index.delete_index(i, data[i], rid)
@@ -237,7 +234,7 @@ class Transaction:
 
     
     def commit(self):
-        print(self.id, " committed ")
+        #print(self.id, " committed ")
         for query, args, table in self.queries: 
             table.lock_manager.release_all_locks(self.held_locks, self.id)
         return True
