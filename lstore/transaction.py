@@ -39,6 +39,7 @@ class Transaction:
     def run(self):
         i = 0
         for query, args, table in self.queries:
+            self.commits[i] = 2
             if "table" in self.held_locks.keys(): #if a table lock is held by the transaction, all transactions will be able to get their locks by default, as the table lock won't be released until after commit
                 success = True
 
@@ -85,6 +86,7 @@ class Transaction:
             elif query.__name__ == 'insert':
                 #probably need to look out for phantom reads or something
                 #check if table lock exists:
+                print("insert")
                 success = table.lock_manager.block_table_lock(self.id)
                 if success:
                     if "dynamic-state" not in self.held_locks:
@@ -157,6 +159,7 @@ class Transaction:
                 result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
+                print("insert was aborted probably")
                 return self.abort()
 
             if query.__name__ == 'insert':
@@ -165,7 +168,7 @@ class Transaction:
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
 
-            self.commits[i] = 0
+            self.commits[i] = 1
             i += 1
             
         return self.commit()
@@ -175,14 +178,17 @@ class Transaction:
         #print(self.id, "abort is happening ////////////////////////////////////")
         i = len(self.commits)-1
         for query, args, table in reversed(self.queries):
-            if self.commits[i] == 0:
+            print("checking i ", i)
+            if self.commits[i] == 1 or self.commits[i] == 0:
                 pass
             elif query.__name__ == 'insert':
                 key_col = table.key
-                rid = table.index.locate(key_col, args[key_col])[0]
-                record = self.select_record(args[key_col], key_col, [1]*table.num_columns)[0]
-                for i in range(len(record)):
-                    table.index.delete_index(i, record[i], rid)
+                rid = table.index.locate(key_col, args[key_col])
+                if rid!=[]:
+                    rid = rid[0]
+                    record = self.select_record(args[key_col], key_col, [1]*table.num_columns)[0]
+                    for i in range(len(record)):
+                        table.index.delete_index(i, record[i], rid)
             elif query.__name__ == 'update':
                 key_col = table.key
                 primary_key = args[key_col] #must deference args this way in case primary_key was changed
