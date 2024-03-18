@@ -17,7 +17,6 @@ class Transaction:
             self.id = Transaction.id
             self.increment_id()
         print("transaction with id ",self.id)
-        self.increment_id()
         self.commits = []
         pass
 
@@ -80,7 +79,7 @@ class Transaction:
                         self.held_locks[rid_val] = []
                     self.held_locks[rid_val].append('w')
                 else:
-                    print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+                    #print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
                     return self.abort()
 
             elif query.__name__ == 'insert':
@@ -125,6 +124,8 @@ class Transaction:
             elif query.__name__ == 'sum_version': #scanning operation
                 print("sum version")
                 success = table.lock_manager.acquire_table_lock(self.id)
+                if success:
+                    print("gonna do sum version")
                 if not success:
                     print("cannot acquire scanning lock on table, outside transactions are holding locks") #PLEASE HANDLE THIS
                     return self.abort()
@@ -143,13 +144,17 @@ class Transaction:
                         self.held_locks[rid_val] = []
                     self.held_locks[rid_val].append('w')
                 else:
-                    print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
+                    #print("could not obtain X lock, another thread is reading/writing") #PLEASE HANDLE THIS
                     return self.abort()
 
             else:
                 print("Nothing....")
 
-            result = query(*args)
+            result = True
+            if query.__name__ == 'insert':
+                result = query(*args, self.id)
+            else:
+                result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
                 return self.abort()
@@ -157,7 +162,6 @@ class Transaction:
             if query.__name__ == 'insert':
                 key_col = table.key
                 rid = table.index.locate(key_col, args[key_col])[0]
-                table.lock_manager.locks[rid].transaction_ids.append(self.id)
                 self.held_locks[rid] = []
                 self.held_locks[rid].append('w')
 
@@ -168,7 +172,7 @@ class Transaction:
 
     
     def abort(self):
-        print(self.id, "abort is happening ////////////////////////////////////")
+        #print(self.id, "abort is happening ////////////////////////////////////")
         i = len(self.commits)-1
         for query, args, table in reversed(self.queries):
             if self.commits[i] == 0:
@@ -227,6 +231,7 @@ class Transaction:
 
     
     def commit(self):
+        print(self.id, " committed ")
         for query, args, table in self.queries: 
             table.lock_manager.release_all_locks(self.held_locks, self.id)
         return True

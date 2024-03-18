@@ -50,11 +50,11 @@ class Query:
     # Return True upon succesful insertion
     # Returns False if insert fails for whatever reason
     """
-    def insert(self, *columns):
+    def insert(self, *columns, t_id=None):
         primary_key = columns[self.table.key]
         rid = self.table.index.locate(self.table.key, primary_key)
         if rid == []:
-            self.table.insert_record(*columns)  # if primary key not found
+            self.table.insert_record(*columns, t_id)  # if primary key not found
             return True
         else:
             return False

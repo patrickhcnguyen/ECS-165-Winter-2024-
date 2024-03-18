@@ -218,7 +218,7 @@ class Table:
         return
 
 
-    def insert_record(self, *columns):
+    def insert_record(self, *columns, t_id=None):
         schema_encoding = '0' * self.num_columns
         rid = 0
         num_pages = 0
@@ -226,7 +226,7 @@ class Table:
             #print(columns)
             rid = self.rid
             self.rid += 1
-            self.lock_manager.acquire_exclusive_lock(rid)
+            self.lock_manager.acquire_exclusive_lock(rid, t_id)
                 #print(columns, "Ipassed the matrix or something by:", threading.current_thread().name)
             if (rid != 0 and rid % self.max_records == 0): #if there's no capacity
                 self.init_page_dir() #add one base page (a set of physical pages, one for each column)

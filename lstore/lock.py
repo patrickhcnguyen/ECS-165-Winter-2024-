@@ -25,9 +25,7 @@ class LockManager:
             #print("t id is ", t_id)
             if "table" in self.locks:
                 return False
-            if rid in self.locks:
-                pass
-            else:
+            if rid not in self.locks:
                 self.locks[rid] = Lock()
             return self.locks[rid].get_exclusive_lock(t_id)
 
@@ -36,12 +34,13 @@ class LockManager:
         with self.thread_lock:
             check_compatibility = True #checks whetehr the other locks existing are of the same transaction
             for lock in self.locks:
-                for i in lock.transaction_ids:
+                for i in self.locks[lock].transaction_ids:
                     if i != t_id:
+                        print("table lock blocked by ", i, self.locks[lock].transaction_ids)
                         check_compatibility = False
             if check_compatibility == False:
                 return False
-            
+            print("acquiring table lock ")
             self.locks["table"] = Lock()
             return self.locks["table"].get_exclusive_lock(t_id)
 
@@ -55,15 +54,22 @@ class LockManager:
                 return self.locks["dynamic-state"].get_shared_lock(t_id) #get a shared lock so other transactions that are inserting can also do so, this lock is to simply stop scanning operations
 
     def release_all_locks(self, held_locks, t_id):
-        print("release locks", t_id)
+        #print("release locks", t_id)
         with self.thread_lock:
             for rid, locks in held_locks.items():
                 # print("rid: ", rid, " locks: ", locks)
                 for lock in locks:
                     if lock == 'r':
-                        self.locks[rid].release_shared_lock(t_id)
+                        if rid in self.locks:
+                            self.locks[rid].release_shared_lock(t_id)
+                            if len(self.locks[rid].transaction_ids) == 0:
+                                del self.locks[rid]
                     elif lock == 'w':
-                        self.locks[rid].release_exclusive_lock(t_id)
+                        if rid in self.locks:
+                            self.locks[rid].release_exclusive_lock(t_id)
+                            if len(self.locks[rid].transaction_ids) == 0:
+                                del self.locks[rid]
+        #print(self.locks)
 
 class Lock:
     def __init__(self):
@@ -94,7 +100,7 @@ class Lock:
     def get_exclusive_lock(self, t_id=None):
         if self.read_count == 0 and self.write_count == 0:
             self.write_count += 1
-            print("I have acquired an x lock ", t_id)
+            #print("I have acquired an x lock ", t_id)
             if t_id!=None:
                 self.transaction_ids.append(t_id)
             return True
