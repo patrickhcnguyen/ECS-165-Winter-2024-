@@ -26,7 +26,7 @@ class TransactionWorker:
     Runs all transaction as a thread
     """
     def run(self):
-        print("run thread")
+        #print("run thread")
         self.thread = threading.Thread(target=self.__run, args=())
         self.thread.start()
         # here you need to create a thread and call __run
@@ -37,7 +37,7 @@ class TransactionWorker:
     """
     def join(self):
         self.thread.join()
-        print("end thread")
+        #print("end thread")
 
 
     def __run(self):

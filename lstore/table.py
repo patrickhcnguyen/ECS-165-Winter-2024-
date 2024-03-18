@@ -66,7 +66,6 @@ class Table:
         self.tail_page_directory = {}
         self.num_pages = -1 #stores the amount of pages minus 1
         self.num_tail_pages = -1 #stores the amount of pages minus 1
-        print("nooooooo")
         if load == 'none':
             self.init_page_dir()
             self.init_tail_page_dir()
@@ -180,8 +179,9 @@ class Table:
         # make the indirection column of the tail record hold the rid currently held in the base record's indirection column
             # tail record of indirection column will then point to the prev version of data -> will be -1 if the prev version is the base record, based on our implementation of insert_record
         prev_version_rid = self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).read_val(key_rid)
-        if key == 92107369:
-            print(prev_version_rid)
+        if key == 92107428:
+            print("prev update is at ", prev_version_rid)
+            print("newest update at ", tail_rid)
         self.bufferpool.get_page(self.name, pages_start, False).write(prev_version_rid, tail_rid)
         #print("indirection column should be ",)
         #tail_rid = index_within_page + (pages_start // (self.num_columns+5))*(max_records)
@@ -201,27 +201,43 @@ class Table:
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
                 data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         else: # reference the prev_tail_record during the update
+            if key == 92107428:
+                print("AM HERE")
+                print(self.select_record(key, self.key, [1]*self.num_columns)[0].columns)
             prev_tpage_set = prev_version_rid // max_records
             #print(prev_version_rid)
             for i in range(self.num_columns):
                 value = self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid)
-                #print("get val from indirection: ", value)
+                if key == 92107428:
+                    print("get val from indirection: ", value)
                 if (record[i] != None):
                     self.index.delete_index(i, value, key_rid)
                     self.index.add_index(i, record[i], key_rid)
                     value = record[i]
                 self.bufferpool.get_page(self.name, i+4+pages_start, False).write(value, tail_rid)
-                if key == 92107369:
+                if key == 92107428:
                     print(data)
                 data.append(self.bufferpool.get_page(self.name, i+4+pages_start, False).read_val(tail_rid))
         self.bufferpool.get_page(self.name, self.num_columns+4+pages_start, False).write(key_rid, tail_rid)
         #update indirection column of base record
+        """if key == 92107428:
+            print("CHECKI HERE", self.select_record_version(key, self.key, [1]*self.num_columns,0)[0].columns)"""
         self.bufferpool.get_page(self.name, page_set*(self.num_columns+4), True).overwrite(key_rid, tail_rid)
+        columns = []
+        """if key == 92107428:
+            print("CHECKI NEWEST HERE", self.select_record_version(key, self.key, [1]*self.num_columns,0)[0].columns)"""
         #update schema encoding column of base record
         self.bufferpool.get_page(self.name, 3+page_set*(self.num_columns+4), True).overwrite(key_rid, 1)
         #self.records_updating.remove(current_tail_record)
-        if key == 92107369:
+        if key == 92107428:
+            print("CHECKI -1 VERSION NOW", self.select_record_version(key, self.key, [1]*self.num_columns,-1)[0].columns)
+        if key == 92107428:
             print(data)
+        if key == 92107428 and prev_version_rid!=-1:
+            prev_tpage_set = prev_version_rid // max_records
+            for i in range(self.num_columns):
+                columns.append(self.bufferpool.get_page(self.name, i+4+prev_tpage_set*(self.num_columns+5), False).read_val(prev_version_rid))
+            print(prev_version_rid, " FOR REALSSSSS ", columns)
         return
 
 
@@ -326,11 +342,14 @@ class Table:
                         has_past = False
                 if has_past:
                     #print(self.bufferpool.get_page(self.name, tail_page_index+self.num_columns+4, False).read_val(indirection))
+            
                     for i in range(len(projected_columns_index)):
                         if projected_columns_index[i] == 1:
                             data = self.bufferpool.get_page(self.name, tail_page_index+i+4, False).read_val(indirection)
                             columns.append(data)
-                    #print(columns)
+                    if search_key == 92107428:
+                        print("selecting record version at,", indirection)
+                        #print(columns)
                 else: # if it's asking for versions that doesn't exist, return base page
                     for i in range(len(projected_columns_index)):
                         if projected_columns_index[i] == 1:
@@ -416,5 +435,4 @@ class Table:
         # Re-bind bufferpool's reference to this table
         self.bufferpool.add_table(self.name, self)
         self.index.thread_lock = threading.Lock()
-        self.index.createIndex_thread_lock = threading.Lock()
-        
+        self.index.createIndex_thread_lock = threading.Lock()        

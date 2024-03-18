@@ -231,5 +231,5 @@ class BufferPool:
         self.capacity = capacity  
         disk_page_count = bp.disk_page_count
         self.disk_page_count = disk_page_count 
-        print(self.pool.keys())  
-        print(bp.pool.keys())     
+        #print(self.pool.keys())  
+        #print(bp.pool.keys())     
