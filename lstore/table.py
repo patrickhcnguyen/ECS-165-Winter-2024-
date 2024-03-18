@@ -232,8 +232,6 @@ class Table:
                 self.init_page_dir() #add one base page (a set of physical pages, one for each column)
             num_pages = self.num_pages
             #print("      there are currently this many pages: ", self.num_pages)
-        if columns[self.key] == 92107369:
-            print(rid)
         #print(" I added a page set by: ", threading.current_thread().name)
         pages_start = (num_pages+1) - (self.num_columns+4)
         #print("      the other page start will show:", (rid // self.max_records)*(self.num_columns+4))
@@ -243,8 +241,6 @@ class Table:
             self.bufferpool.get_page(self.name, i+4+pages_start, True).write(columns[i], rid)
             #data.append(self.bufferpool.get_page(self.name, i+4+pages_start, True).read_val(rid))
         self.bufferpool.get_page(self.name, pages_start, True).write(-1, rid) #indirection_column = -1 means no tail record exists
-        if columns[self.key] == 92107369:
-            print(self.bufferpool.get_page(self.name, pages_start, True).read_val(rid))
         self.bufferpool.get_page(self.name, pages_start+1, True).write(rid, rid) #rid column
         self.bufferpool.get_page(self.name, pages_start+2, True).write(0, rid) #time_stamp column
         self.bufferpool.get_page(self.name, pages_start+3, True).write(0, rid) #schema_encoding column

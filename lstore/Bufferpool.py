@@ -210,7 +210,6 @@ class BufferPool:
             self.evict_bufferpool()
             self.disk_page_count+=1
         self.pool.clear()
-        print(self.pool.keys())
         filename = "bufferpool.pickle"
         path = os.path.join(self.parent_path, filename)
         for key in self.table_access.keys():

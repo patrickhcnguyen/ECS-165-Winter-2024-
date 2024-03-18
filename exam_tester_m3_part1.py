@@ -87,18 +87,5 @@ for i in range(numkeys):
     bp.evict_bufferpool()
     bp.disk_page_count+=1
 
-key = 92107369
-rid = grades_table.index.locate(grades_table.key, key)[0]
-base_page_index = (rid//64)*(grades_table.num_columns+4)
-columns = []
-for i in range(grades_table.num_columns):
-    data = grades_table.bufferpool.get_page(grades_table.name, base_page_index+i+4, True).read_val(rid)
-    print(grades_table.page_directory[base_page_index+i+4])
-    columns.append(data)
-        #result2 = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
-print(rid, '        check this', key, ':', columns)
-print(grades_table.page_directory[base_page_index])
-print(grades_table.bufferpool.pool.keys())
-
 
 db.close()

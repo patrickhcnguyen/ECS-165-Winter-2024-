@@ -26,9 +26,6 @@ keys = []
 records = {}
 seed(3562901)
 
-key = 92107428
-result = query.select_version(key, 0, [1, 1, 1, 1, 1], -1)[0].columns
-print(result)
 
 # re-generate records for testing
 for i in range(0, number_of_records):
