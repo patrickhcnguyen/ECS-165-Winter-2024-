@@ -21,7 +21,6 @@ class Index:
                 key_list = list(self.indices[column].get(value, []))
                 self.drop_index(column)
             else:
-                print(self.indices[column])
                 key_list = list(self.indices[column].get(value, []))
         return key_list
 

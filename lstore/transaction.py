@@ -16,6 +16,7 @@ class Transaction:
         with Transaction.thread_lock:
             self.id = Transaction.id
             self.increment_id()
+        print("transaction with id ",self.id)
         self.increment_id()
         self.commits = []
         pass
@@ -167,10 +168,10 @@ class Transaction:
 
     
     def abort(self):
-        print("aborted is happened ////////////////////////////////////")
+        print(self.id, "abort is happening ////////////////////////////////////")
         i = len(self.commits)-1
         for query, args, table in reversed(self.queries):
-            if self.commits == 0:
+            if self.commits[i] == 0:
                 pass
             elif query.__name__ == 'insert':
                 key_col = table.key
@@ -180,16 +181,20 @@ class Transaction:
                     table.index.delete_index(i, record[i], rid)
             elif query.__name__ == 'update':
                 key_col = table.key
-                rid = table.index.locate(key_col, args[1][key_col])[0] #must deference args this way in case primary_key was changed
+                primary_key = args[key_col] #must deference args this way in case primary_key was changed
+                if primary_key==None:
+                    primary_key = args[0]
+                rid = table.index.locate(key_col, primary_key)[0]
                 max_records = table.max_records
                 page_set = rid // max_records 
                 tail_rid = table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).read_val(rid)
                 tail_page_num = (tail_rid // max_records)*(table.num_columns+5)
-                prev_version_rid = self.bufferpool.get_page(self.name, tail_page_num, False).read_val(tail_rid)  
-                table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(prev_version_rid)
-                data = self.select_record_version(args[key_col], key_col, [1]*table.num_columns, -1)[0]
+                prev_version_rid = table.bufferpool.get_page(table.name, tail_page_num, False).read_val(tail_rid)  
+                table.bufferpool.get_page(table.name, page_set*(table.num_columns+4), True).overwrite(rid, prev_version_rid)
+                data = table.select_record_version(primary_key, key_col, [1]*table.num_columns, -1)[0].columns
+                print("reverting back to ", data)
                 for i in range(len(data)):
-                    if (table.index.indices[i] != None and args[i] != None):
+                    if (table.index.indices[i] != None and args[i+1] != None):
                         table.index.delete_index(i, data[i], rid)
                         table.index.add_index(i, data[i], rid)
             elif query.__name__ == 'delete':

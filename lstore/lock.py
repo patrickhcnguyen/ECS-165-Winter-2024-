@@ -22,6 +22,7 @@ class LockManager:
 
     def acquire_exclusive_lock(self, rid, t_id=None):
         with self.thread_lock:
+            #print("t id is ", t_id)
             if "table" in self.locks:
                 return False
             if rid in self.locks:
@@ -54,7 +55,7 @@ class LockManager:
                 return self.locks["dynamic-state"].get_shared_lock(t_id) #get a shared lock so other transactions that are inserting can also do so, this lock is to simply stop scanning operations
 
     def release_all_locks(self, held_locks, t_id):
-        #print("release locks")
+        print("release locks", t_id)
         with self.thread_lock:
             for rid, locks in held_locks.items():
                 # print("rid: ", rid, " locks: ", locks)
@@ -93,6 +94,7 @@ class Lock:
     def get_exclusive_lock(self, t_id=None):
         if self.read_count == 0 and self.write_count == 0:
             self.write_count += 1
+            print("I have acquired an x lock ", t_id)
             if t_id!=None:
                 self.transaction_ids.append(t_id)
             return True
